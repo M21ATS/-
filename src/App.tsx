@@ -5,7 +5,10 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, Eye, EyeOff, Users, Plus, LogIn, Trash2 } from "lucide-react";
+import { 
+  Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
+  Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX 
+} from "lucide-react";
 import { io, Socket } from "socket.io-client";
 
 /* ─────────────────────────────────────────────────────────
@@ -212,6 +215,7 @@ const SOUNDS = {
   NEXT_Q: 'https://mixkit.imgix.net/sfx/preview/mixkit-fast-double-click-on-mouse-2751.mp3',
   SHOW_A: 'https://mixkit.imgix.net/sfx/preview/mixkit-interface-hint-notification-911.mp3',
   UPLOAD: 'https://mixkit.imgix.net/sfx/preview/mixkit-software-interface-start-2574.mp3',
+  BG_MUSIC: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Subtle loop
 };
 
 const playSound = (url: string) => {
@@ -348,8 +352,9 @@ function checkWin(tiles: string[], team: 'red' | 'green') {
    COMPONENTS
 ───────────────────────────────────────────────────────── */
 
-const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1 }: any) => {
-  const HW = 88, HH = 99;
+const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 1 }: any) => {
+  const baseW = 88, baseH = 99;
+  const HW = baseW * cellSize, HH = baseH * cellSize;
   const pts = (() => {
     const cx = HW / 2, cy = HH / 2, p = [];
     for (let i = 0; i < 6; i++) {
@@ -370,12 +375,12 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1 }: any) => {
       whileTap={{ scale: 0.9 }}
       animate={isSelected ? { scale: 1.15 } : { scale: 1 }}
     >
-      <polygon points={pts} fill="rgba(0,0,0,0.12)" transform="translate(3,4)" />
+      <polygon points={pts} fill="rgba(0,0,0,0.12)" transform={`translate(${3 * cellSize},${4 * cellSize})`} />
       <polygon 
         points={pts} 
         fill={colors.fill} 
         stroke={isSelected ? '#1A1A1A' : colors.stroke} 
-        strokeWidth={isSelected ? 5 : 2.5} 
+        strokeWidth={isSelected ? 5 * cellSize : 2.5 * cellSize} 
         className="transition-all duration-300"
       />
       {isSelected && (
@@ -391,7 +396,7 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1 }: any) => {
           <motion.div 
             className="relative"
             animate={{ 
-              y: [0, -2, 0],
+              y: [0, -2 * cellSize, 0],
               rotate: [0, -1, 1, 0],
               scale: isSelected ? [1, 1.1, 1] : 1
             }}
@@ -403,7 +408,7 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1 }: any) => {
           >
             <span 
               className="font-bold select-none font-arabic"
-              style={{ color: colors.text, fontSize: `${fontSize * 2}rem` }}
+              style={{ color: colors.text, fontSize: `${fontSize * 2 * cellSize}rem` }}
             >
               {letter}
             </span>
@@ -454,8 +459,21 @@ export default function App() {
   const [selectedIdx, setSelectedIdx] = useState<number>(-1);
   const [questions, setQuestions] = useState(FALLBACK_QUESTIONS);
   const [winner, setWinner] = useState<'red' | 'green' | null>(null);
+  const [scores, setScores] = useState({ red: 0, green: 0 });
+  const [winCondition, setWinCondition] = useState(3);
+  const [gameWinner, setGameWinner] = useState<'red' | 'green' | null>(null);
   const [hideQuestionsFromGuest, setHideQuestionsFromGuest] = useState(false);
   const [fontSize, setFontSize] = useState(1);
+  const [cellSize, setCellSize] = useState(1);
+  const [sidebarWidth, setSidebarWidth] = useState(350);
+  const [isResizing, setIsResizing] = useState(false);
+  const [bgMusicEnabled, setBgMusicEnabled] = useState(false);
+  const [bgMusicAudio] = useState(() => {
+    const audio = new Audio(SOUNDS.BG_MUSIC);
+    audio.loop = true;
+    audio.volume = 0.1;
+    return audio;
+  });
   
   // Banks Management
   const [banks, setBanks] = useState<Record<string, Record<string, { q: string; a: string }[]>>>({
@@ -577,10 +595,19 @@ export default function App() {
       setTimerRunning(state.timerRunning);
       if (state.hideQuestionsFromGuest !== undefined) setHideQuestionsFromGuest(state.hideQuestionsFromGuest);
       if (state.questions) setQuestions(state.questions);
+      if (state.scores) setScores(state.scores);
+      if (state.winCondition) setWinCondition(state.winCondition);
+      if (state.gameWinner !== undefined) setGameWinner(state.gameWinner);
+      if (state.cellSize) setCellSize(state.cellSize);
       if (state.screen) setScreen(state.screen);
     });
 
     newSocket.on("player-list", (players) => {
+      if (players.length > playerList.length && playerList.length > 0) {
+        playSound(SOUNDS.JOIN);
+      } else if (players.length < playerList.length) {
+        playSound(SOUNDS.LEAVE);
+      }
       setPlayerList(players);
     });
 
@@ -639,22 +666,96 @@ export default function App() {
     playSound(SOUNDS.CLICK);
   };
 
+  useEffect(() => {
+    if (bgMusicEnabled) {
+      bgMusicAudio.play().catch(() => {});
+    } else {
+      bgMusicAudio.pause();
+    }
+  }, [bgMusicEnabled, bgMusicAudio]);
+
+  const startResizing = useCallback(() => {
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      // In RTL (dir="rtl"):
+      // Host Sidebar is on the RIGHT (order-1). Width = window.innerWidth - e.clientX
+      // Guest Sidebar is on the LEFT (order-2). Width = e.clientX
+      const newWidth = isHost ? (window.innerWidth - e.clientX) : e.clientX;
+      if (newWidth > 200 && newWidth < 800) {
+        setSidebarWidth(newWidth);
+      }
+    }
+  }, [isResizing, isHost]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [resize, stopResizing]);
+
   const markTile = (state: string) => {
-    if (selectedIdx === -1 || !isHost) return;
+    if (selectedIdx === -1 || !isHost || gameWinner) return;
+    if (state === 'neutral') {
+      playSound(SOUNDS.ERROR);
+    } else {
+      playSound(SOUNDS.SUCCESS);
+    }
     playSound(SOUNDS.MARK);
     const newTiles = [...tiles];
     newTiles[selectedIdx] = state;
     setTiles(newTiles);
     broadcastState({ tiles: newTiles });
     
-    if (checkWin(newTiles, 'red')) {
-      setWinner('red');
-      playSound(SOUNDS.WIN);
-    }
-    else if (checkWin(newTiles, 'green')) {
-      setWinner('green');
-      playSound(SOUNDS.WIN);
-    }
+    const checkTeamWin = (team: 'red' | 'green') => {
+      if (checkWin(newTiles, team)) {
+        setWinner(team);
+        const newScores = { ...scores, [team]: scores[team] + 1 };
+        setScores(newScores);
+        
+        // First to winCondition wins
+        if (newScores[team] >= winCondition) {
+          setGameWinner(team);
+          broadcastState({ winner: team, scores: newScores, gameWinner: team });
+        } else {
+          broadcastState({ winner: team, scores: newScores });
+        }
+        playSound(SOUNDS.WIN);
+        return true;
+      }
+      return false;
+    };
+
+    if (state === 'red') checkTeamWin('red');
+    if (state === 'green') checkTeamWin('green');
+  };
+
+  const nextRound = () => {
+    if (!isHost) return;
+    const newState = {
+      tiles: Array(25).fill('neutral'),
+      letters: shuffleArray(INITIAL_LETTERS),
+      winner: null,
+      selectedIdx: -1,
+      timeLeft: timerDuration,
+      timerRunning: false,
+    };
+    setTiles(newState.tiles);
+    setLetters(newState.letters);
+    setWinner(null);
+    setSelectedIdx(-1);
+    setTimeLeft(timerDuration);
+    setTimerRunning(false);
+    broadcastState(newState);
   };
 
   const resetGame = () => {
@@ -664,13 +765,18 @@ export default function App() {
     const newState = {
       tiles: Array(25).fill('neutral'),
       letters: shuffled,
+      winner: null,
       selectedIdx: -1,
       timeLeft: timerDuration,
       timerRunning: false,
+      scores: { red: 0, green: 0 },
+      gameWinner: null,
     };
     setTiles(newState.tiles);
     setLetters(newState.letters);
     setWinner(null);
+    setScores(newState.scores);
+    setGameWinner(null);
     setSelectedIdx(-1);
     setTimeLeft(timerDuration);
     setTimerRunning(false);
@@ -961,90 +1067,135 @@ export default function App() {
           {/* Host: Questions on Left (End in RTL) */}
           <AnimatePresence>
             {selectedIdx !== -1 && (
-              <motion.aside 
-                initial={{ width: 0, opacity: 0, x: -50 }}
-                animate={{ width: 'auto', opacity: 1, x: 0 }}
-                exit={{ width: 0, opacity: 0, x: -50 }}
-                className="w-full lg:w-[320px] flex flex-col p-4 lg:p-6 gap-4 border-b-4 lg:border-b-0 lg:border-l-4 border-[#1A1A1A]/10 bg-[#F0F4E8] z-20 order-3 lg:order-1 overflow-y-auto max-h-[50vh] lg:max-h-screen"
-              >
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col gap-4"
+              <div className="relative flex-shrink-0 z-20 order-3 lg:order-1 flex">
+                <motion.aside 
+                  initial={{ width: 0, opacity: 0, x: -50 }}
+                  animate={{ width: sidebarWidth, opacity: 1, x: 0 }}
+                  exit={{ width: 0, opacity: 0, x: -50 }}
+                  className="h-full flex flex-col p-4 lg:p-6 gap-4 border-b-4 lg:border-b-0 lg:border-l-4 border-[#1A1A1A]/10 bg-[#F0F4E8] overflow-y-auto max-h-[50vh] lg:max-h-screen"
+                  style={{ width: sidebarWidth }}
                 >
-                  <div className="bg-white border-4 border-[#1A1A1A] rounded-3xl p-4 lg:p-6 text-center shadow-[4px_4px_0_#1A1A1A]">
-                    <h3 className="text-[clamp(2rem,8vw,4rem)] font-black text-[#1A1A1A] mb-1">{currentLetter}</h3>
-                    <p className={`text-[clamp(0.6rem,2vw,0.8rem)] font-bold uppercase tracking-widest ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
-                      {tiles[selectedIdx] === 'red' ? 'فريق أحمر' : tiles[selectedIdx] === 'green' ? 'فريق أخضر' : 'محايدة'}
-                    </p>
-                  </div>
-
-                  {currentQuestions.length > 0 ? (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[clamp(0.7rem,2vw,0.9rem)] font-bold text-gray-500">{qIdx + 1} / {currentQuestions.length}</span>
-                        <button 
-                          onClick={() => { playSound(SOUNDS.NEXT_Q); setQIdx((qIdx + 1) % currentQuestions.length); setShowAnswer(false); }}
-                          className="bg-gray-100 border-2 border-[#1A1A1A] rounded-lg px-3 py-1 text-[clamp(0.6rem,1.5vw,0.75rem)] font-bold hover:bg-gray-200 transition-transform active:scale-95"
-                        >
-                          السؤال التالي 🔄
-                        </button>
-                      </div>
-
-                      <motion.div 
-                        key={qIdx}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 lg:p-6 shadow-[4px_4px_0_#1A1A1A] min-h-[100px] flex items-center justify-center text-center text-[clamp(0.9rem,2.5vw,1.1rem)] font-bold leading-relaxed whitespace-normal"
-                      >
-                        {currentQ.q}
-                      </motion.div>
-
-                      <button 
-                        onClick={() => { playSound(SOUNDS.SHOW_A); setShowAnswer(!showAnswer); }}
-                        className={`w-full border-4 border-[#1A1A1A] rounded-2xl py-3 lg:py-4 font-bold shadow-[4px_4px_0_#1A1A1A] transition-all flex items-center justify-center gap-2 active:scale-95 text-[clamp(0.8rem,2vw,1rem)] ${showAnswer ? 'bg-green-50 border-green-600 text-green-800' : 'bg-white text-gray-400'}`}
-                      >
-                        {showAnswer ? <><EyeOff size={18} /> {currentQ.a}</> : <><Eye size={18} /> كشف الإجابة</>}
-                      </button>
-                    </>
-                  ) : (
-                    <div className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-6 text-center text-gray-400 font-bold italic text-sm">
-                      لا توجد أسئلة لهذا الحرف
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col gap-4"
+                  >
+                    <div className="bg-white border-4 border-[#1A1A1A] rounded-3xl p-4 lg:p-6 text-center shadow-[4px_4px_0_#1A1A1A]">
+                      <h3 className="text-[clamp(2rem,8vw,4rem)] font-black text-[#1A1A1A] mb-1">{currentLetter}</h3>
+                      <p className={`text-[clamp(0.6rem,2vw,0.8rem)] font-bold uppercase tracking-widest ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
+                        {tiles[selectedIdx] === 'red' ? 'فريق أحمر' : tiles[selectedIdx] === 'green' ? 'فريق أخضر' : 'محايدة'}
+                      </p>
                     </div>
-                  )}
 
-                  <div className="grid grid-cols-1 gap-2 lg:gap-3 mt-2 lg:mt-4 pt-4 border-t-2 border-dashed border-gray-300">
-                    <button 
-                      onClick={() => markTile('red')}
-                      className="bg-[#EF4444] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#991B1B] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-[clamp(0.8rem,2vw,1rem)]"
-                    >
-                      🔴 فريق أحمر
-                    </button>
-                    <button 
-                      onClick={() => markTile('green')}
-                      className="bg-[#22C55E] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#166534] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-[clamp(0.8rem,2vw,1rem)]"
-                    >
-                      🟢 فريق أخضر
-                    </button>
-                    <button 
-                      onClick={() => markTile('neutral')}
-                      className="bg-gray-500 text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#374151] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-[clamp(0.8rem,2vw,1rem)]"
-                    >
-                      ↺ محايد
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.aside>
+                    {currentQuestions.length > 0 ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[clamp(0.7rem,2vw,0.9rem)] font-bold text-gray-500">{qIdx + 1} / {currentQuestions.length}</span>
+                          <button 
+                            onClick={() => { playSound(SOUNDS.NEXT_Q); setQIdx((qIdx + 1) % currentQuestions.length); setShowAnswer(false); }}
+                            className="bg-gray-100 border-2 border-[#1A1A1A] rounded-lg px-3 py-1 text-[clamp(0.6rem,1.5vw,0.75rem)] font-bold hover:bg-gray-200 transition-transform active:scale-95"
+                          >
+                            السؤال التالي 🔄
+                          </button>
+                        </div>
+
+                        <motion.div 
+                          key={qIdx}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 lg:p-6 shadow-[4px_4px_0_#1A1A1A] min-h-[120px] max-h-[250px] overflow-y-auto flex items-center justify-center text-center font-bold leading-relaxed break-words whitespace-normal scrollbar-thin scrollbar-thumb-gray-300 ${
+                            currentQ.q.length > 150 ? 'text-base lg:text-lg' : 'text-lg lg:text-xl'
+                          }`}
+                        >
+                          {currentQ.q}
+                        </motion.div>
+
+                        <button 
+                          onClick={() => { playSound(SOUNDS.SHOW_A); setShowAnswer(!showAnswer); }}
+                          className={`w-full border-4 border-[#1A1A1A] rounded-2xl py-3 lg:py-4 font-bold shadow-[4px_4px_0_#1A1A1A] transition-all flex items-center justify-center gap-2 active:scale-95 text-[clamp(0.8rem,2vw,1rem)] ${showAnswer ? 'bg-green-50 border-green-600 text-green-800' : 'bg-white text-gray-400'}`}
+                        >
+                          {showAnswer ? <><EyeOff size={18} /> {currentQ.a}</> : <><Eye size={18} /> كشف الإجابة</>}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-6 text-center text-gray-400 font-bold italic text-sm">
+                        لا توجد أسئلة لهذا الحرف
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-2 lg:gap-3 mt-2 lg:mt-4 pt-4 border-t-2 border-dashed border-gray-300">
+                      <button 
+                        onClick={() => markTile('red')}
+                        className="bg-[#EF4444] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#991B1B] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-[clamp(0.8rem,2vw,1rem)]"
+                      >
+                        🔴 فريق أحمر
+                      </button>
+                      <button 
+                        onClick={() => markTile('green')}
+                        className="bg-[#22C55E] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#166534] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-[clamp(0.8rem,2vw,1rem)]"
+                      >
+                        🟢 فريق أخضر
+                      </button>
+                      <button 
+                        onClick={() => markTile('neutral')}
+                        className="bg-gray-500 text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#374151] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-[clamp(0.8rem,2vw,1rem)]"
+                      >
+                        ↺ محايد
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.aside>
+                {/* Resize Handle */}
+                <div 
+                  onMouseDown={startResizing}
+                  className="hidden lg:block w-1.5 h-full cursor-col-resize bg-[#1A1A1A]/5 hover:bg-[#1A1A1A]/20 transition-colors"
+                />
+              </div>
             )}
           </AnimatePresence>
 
           {/* Main Board */}
           <motion.main 
             layout
-            className="flex-1 flex items-center justify-center p-4 lg:p-10 relative order-2 min-h-[300px] lg:min-h-0"
+            className="flex-1 flex flex-col items-center justify-center p-4 lg:p-10 relative order-2 min-h-[300px] lg:min-h-0"
             animate={{ scale: selectedIdx !== -1 ? 0.95 : 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
+            <div className="mb-8 flex items-center gap-12 bg-white border-8 border-[#1A1A1A] rounded-[30px] px-10 py-4 shadow-[8px_8px_0_#1A1A1A] relative z-20">
+              <div className="text-center">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Red Team</p>
+                <div className="flex gap-1.5 justify-center">
+                  {[...Array(winCondition)].map((_, i) => (
+                    <motion.div 
+                      key={i} 
+                      animate={scores.red > i ? { scale: [1, 1.3, 1], backgroundColor: '#EF4444' } : {}}
+                      className={`w-5 h-5 rounded-full border-2 border-[#1A1A1A] ${scores.red > i ? 'bg-red-500' : 'bg-gray-100'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="text-4xl font-black text-[#1A1A1A] flex flex-col items-center">
+                <span className="text-[10px] opacity-30 mb-[-4px]">SCORE</span>
+                <div className="flex items-center gap-4">
+                  <motion.span key={`red-score-${scores.red}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.red}</motion.span>
+                  <span className="opacity-20">-</span>
+                  <motion.span key={`green-score-${scores.green}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.green}</motion.span>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1">Green Team</p>
+                <div className="flex gap-1.5 justify-center">
+                  {[...Array(winCondition)].map((_, i) => (
+                    <motion.div 
+                      key={i} 
+                      animate={scores.green > i ? { scale: [1, 1.3, 1], backgroundColor: '#22C55E' } : {}}
+                      className={`w-5 h-5 rounded-full border-2 border-[#1A1A1A] ${scores.green > i ? 'bg-green-500' : 'bg-gray-100'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Team Goal Indicators */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-6 lg:h-8 bg-green-500/10 border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center">
@@ -1061,28 +1212,34 @@ export default function App() {
               </div>
             </div>
 
-            <svg viewBox="0 0 550 500" className="w-full max-w-[600px] drop-shadow-2xl overflow-visible relative z-10">
-              {Array.from({ length: 5 }).map((_, r) => (
-                Array.from({ length: 5 }).map((__, c) => {
-                  const idx = r * 5 + c;
-                  const HW = 88, HH = 99, gX = 5, gY = 3;
-                  const cS = HW + gX, rS = HH * 0.765 + gY;
-                  const vC = 4 - c; // RTL
-                  const x = 20 + vC * cS + (r % 2 === 0 ? 0 : cS / 2);
-                  const y = 20 + r * rS;
-                  return (
-                    <g key={idx} transform={`translate(${x},${y})`}>
-                      <Hexagon 
-                        state={tiles[idx]} 
-                        letter={letters[idx]} 
-                        isSelected={selectedIdx === idx}
-                        onClick={() => handleTileClick(idx)}
-                        fontSize={fontSize}
-                      />
-                    </g>
-                  );
-                })
-              ))}
+            <svg 
+              viewBox={`0 0 ${550 * cellSize} ${500 * cellSize}`} 
+              className="w-full max-w-[600px] drop-shadow-2xl overflow-visible relative z-10"
+              style={{ maxWidth: `${600 * cellSize}px` }}
+            >
+              {Array.from({ length: 25 }).map((_, idx) => {
+                const r = Math.floor(idx / 5);
+                const c = idx % 5;
+                const baseW = 88, baseH = 99, baseGX = 5, baseGY = 3;
+                const HW = baseW * cellSize, HH = baseH * cellSize;
+                const gX = baseGX * cellSize, gY = baseGY * cellSize;
+                const cS = HW + gX, rS = HH * 0.765 + gY;
+                const vC = 4 - c; // RTL
+                const x = (20 * cellSize) + vC * cS + (r % 2 === 0 ? 0 : cS / 2);
+                const y = (20 * cellSize) + r * rS;
+                return (
+                  <g key={idx} transform={`translate(${x},${y})`}>
+                    <Hexagon 
+                      state={tiles[idx]} 
+                      letter={letters[idx]} 
+                      isSelected={selectedIdx === idx}
+                      onClick={() => handleTileClick(idx)}
+                      fontSize={fontSize}
+                      cellSize={cellSize}
+                    />
+                  </g>
+                );
+              })}
             </svg>
           </motion.main>
 
@@ -1116,6 +1273,35 @@ export default function App() {
                     <button onClick={() => setFontSize(f => Math.max(0.5, f - 0.1))} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
                     <button onClick={() => setFontSize(f => Math.min(2, f + 0.1))} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
                   </div>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
+                  <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">حجم الخلية</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => { const next = Math.max(0.5, cellSize - 0.1); setCellSize(next); broadcastState({ cellSize: next }); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
+                    <button onClick={() => { const next = Math.min(2, cellSize + 0.1); setCellSize(next); broadcastState({ cellSize: next }); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
+                  <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">نظام الفوز</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map(w => (
+                      <button 
+                        key={w}
+                        onClick={() => { setWinCondition(w); broadcastState({ winCondition: w }); playSound(SOUNDS.CLICK); }}
+                        className={`w-7 h-7 border-2 border-[#1A1A1A] rounded-lg font-black text-[9px] transition-colors ${winCondition === w ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A]'}`}
+                      >
+                        {w === 1 ? '1' : w*2-1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
+                  <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">الموسيقى</span>
+                  <button onClick={() => { playSound(SOUNDS.CLICK); setBgMusicEnabled(!bgMusicEnabled); }} className={`w-8 lg:w-10 h-5 lg:h-6 rounded-full border-2 border-[#1A1A1A] transition-colors relative ${bgMusicEnabled ? 'bg-[#22C55E]' : 'bg-gray-300'}`}>
+                    <div className={`absolute top-0.5 w-3 lg:w-4 h-3 lg:h-4 rounded-full bg-white border-2 border-[#1A1A1A] transition-transform flex items-center justify-center ${bgMusicEnabled ? 'right-0.5' : 'left-0.5'}`}>
+                      {bgMusicEnabled ? <Volume2 size={8} /> : <VolumeX size={8} />}
+                    </div>
+                  </button>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
                   <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">إخفاء الأسئلة</span>
@@ -1205,10 +1391,46 @@ export default function App() {
           {/* Guest: Main Board on Left/Center (End in RTL) */}
           <motion.main 
             layout
-            className="flex-1 flex items-center justify-center p-4 lg:p-10 relative order-2 lg:order-1 min-h-[300px] lg:min-h-0"
+            className="flex-1 flex flex-col items-center justify-center p-4 lg:p-10 relative order-2 lg:order-1 min-h-[300px] lg:min-h-0"
             animate={{ scale: selectedIdx !== -1 ? 0.95 : 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
+            {/* Score Counter */}
+            <div className="mb-8 flex items-center gap-12 bg-white border-8 border-[#1A1A1A] rounded-[30px] px-10 py-4 shadow-[8px_8px_0_#1A1A1A] relative z-20">
+              <div className="text-center">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Red Team</p>
+                <div className="flex gap-1.5 justify-center">
+                  {[...Array(winCondition)].map((_, i) => (
+                    <motion.div 
+                      key={`guest-red-dot-${i}`} 
+                      animate={scores.red > i ? { scale: [1, 1.3, 1], backgroundColor: '#EF4444' } : {}}
+                      className={`w-5 h-5 rounded-full border-2 border-[#1A1A1A] ${scores.red > i ? 'bg-red-500' : 'bg-gray-100'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="text-4xl font-black text-[#1A1A1A] flex flex-col items-center">
+                <span className="text-[10px] opacity-30 mb-[-4px]">SCORE</span>
+                <div className="flex items-center gap-4">
+                  <motion.span key={`guest-red-score-${scores.red}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.red}</motion.span>
+                  <span className="opacity-20">-</span>
+                  <motion.span key={`guest-green-score-${scores.green}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.green}</motion.span>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1">Green Team</p>
+                <div className="flex gap-1.5 justify-center">
+                  {[...Array(winCondition)].map((_, i) => (
+                    <motion.div 
+                      key={`guest-green-dot-${i}`} 
+                      animate={scores.green > i ? { scale: [1, 1.3, 1], backgroundColor: '#22C55E' } : {}}
+                      className={`w-5 h-5 rounded-full border-2 border-[#1A1A1A] ${scores.green > i ? 'bg-green-500' : 'bg-gray-100'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Team Goal Indicators */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-6 lg:h-8 bg-green-500/10 border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center">
@@ -1225,86 +1447,104 @@ export default function App() {
               </div>
             </div>
 
-            <svg viewBox="0 0 550 500" className="w-full max-w-[700px] drop-shadow-2xl overflow-visible relative z-10">
-              {Array.from({ length: 5 }).map((_, r) => (
-                Array.from({ length: 5 }).map((__, c) => {
-                  const idx = r * 5 + c;
-                  const HW = 88, HH = 99, gX = 5, gY = 3;
-                  const cS = HW + gX, rS = HH * 0.765 + gY;
-                  const vC = 4 - c; // RTL
-                  const x = 20 + vC * cS + (r % 2 === 0 ? 0 : cS / 2);
-                  const y = 20 + r * rS;
-                  return (
-                    <g key={idx} transform={`translate(${x},${y})`}>
-                      <Hexagon 
-                        state={tiles[idx]} 
-                        letter={letters[idx]} 
-                        isSelected={selectedIdx === idx}
-                        onClick={() => handleTileClick(idx)}
-                        fontSize={fontSize}
-                      />
-                    </g>
-                  );
-                })
-              ))}
+            <svg 
+              viewBox={`0 0 ${550 * cellSize} ${500 * cellSize}`} 
+              className="w-full max-w-[700px] drop-shadow-2xl overflow-visible relative z-10"
+              style={{ maxWidth: `${700 * cellSize}px` }}
+            >
+              {Array.from({ length: 25 }).map((_, idx) => {
+                const r = Math.floor(idx / 5);
+                const c = idx % 5;
+                const baseW = 88, baseH = 99, baseGX = 5, baseGY = 3;
+                const HW = baseW * cellSize, HH = baseH * cellSize;
+                const gX = baseGX * cellSize, gY = baseGY * cellSize;
+                const cS = HW + gX, rS = HH * 0.765 + gY;
+                const vC = 4 - c; // RTL
+                const x = (20 * cellSize) + vC * cS + (r % 2 === 0 ? 0 : cS / 2);
+                const y = (20 * cellSize) + r * rS;
+                return (
+                  <g key={idx} transform={`translate(${x},${y})`}>
+                    <Hexagon 
+                      state={tiles[idx]} 
+                      letter={letters[idx]} 
+                      isSelected={selectedIdx === idx}
+                      onClick={() => handleTileClick(idx)}
+                      fontSize={fontSize}
+                      cellSize={cellSize}
+                    />
+                  </g>
+                );
+              })}
             </svg>
           </motion.main>
 
           {/* Guest: Everything else on Right (Start in RTL) */}
-          <aside className="w-full lg:w-80 flex flex-col p-4 lg:p-6 gap-4 border-t-4 lg:border-t-0 lg:border-r-4 border-[#1A1A1A]/10 bg-[#F0F4E8] z-20 order-1 lg:order-2 overflow-y-auto">
-            <div className="flex items-center justify-between bg-white border-4 border-[#1A1A1A] rounded-xl p-2 shadow-[4px_4px_0_#1A1A1A]">
-              <span className="text-xs font-black">حجم الخط</span>
-              <div className="flex gap-2">
-                <button onClick={() => setFontSize(f => Math.max(0.5, f - 0.1))} className="w-8 h-8 bg-gray-100 border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
-                <button onClick={() => setFontSize(f => Math.min(2, f + 0.1))} className="w-8 h-8 bg-gray-100 border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
+          <div className="relative flex-shrink-0 z-20 order-1 lg:order-2 flex">
+            {/* Resize Handle */}
+            <div 
+              onMouseDown={startResizing}
+              className="hidden lg:block w-1.5 h-full cursor-col-resize bg-[#1A1A1A]/5 hover:bg-[#1A1A1A]/20 transition-colors"
+            />
+            <aside 
+              className="h-full flex flex-col p-4 lg:p-6 gap-4 border-t-4 lg:border-t-0 lg:border-r-4 border-[#1A1A1A]/10 bg-[#F0F4E8] overflow-y-auto"
+              style={{ width: sidebarWidth }}
+            >
+              <div className="flex items-center justify-between bg-white border-4 border-[#1A1A1A] rounded-xl p-2 shadow-[4px_4px_0_#1A1A1A]">
+                <span className="text-xs font-black">حجم الخط</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setFontSize(f => Math.max(0.5, f - 0.1))} className="w-8 h-8 bg-gray-100 border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
+                  <button onClick={() => setFontSize(f => Math.min(2, f + 0.1))} className="w-8 h-8 bg-gray-100 border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
+                </div>
               </div>
-            </div>
 
-            <AnimatePresence>
-              {selectedIdx !== -1 && !hideQuestionsFromGuest && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="bg-white border-4 border-[#1A1A1A] rounded-3xl p-4 lg:p-6 text-center shadow-[4px_4px_0_#1A1A1A]">
-                    <h3 className="text-[clamp(2rem,8vw,4rem)] font-black text-[#1A1A1A] mb-1">{currentLetter}</h3>
-                    <p className={`text-[clamp(0.6rem,2vw,0.8rem)] font-bold uppercase tracking-widest ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
-                      {tiles[selectedIdx] === 'red' ? 'فريق أحمر' : tiles[selectedIdx] === 'green' ? 'فريق أخضر' : 'محايدة'}
-                    </p>
-                  </div>
-                  {currentQuestions.length > 0 && (
-                    <motion.div 
-                      key={qIdx}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 lg:p-6 shadow-[4px_4px_0_#1A1A1A] min-h-[100px] flex items-center justify-center text-center text-[clamp(0.9rem,2.5vw,1.1rem)] font-bold leading-relaxed whitespace-normal"
-                    >
-                      {currentQ.q}
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+              <AnimatePresence>
+                {selectedIdx !== -1 && !hideQuestionsFromGuest && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="flex flex-col gap-4"
+                  >
+                    <div className="bg-white border-4 border-[#1A1A1A] rounded-3xl p-4 lg:p-6 text-center shadow-[4px_4px_0_#1A1A1A]">
+                      <h3 className="text-[clamp(2rem,8vw,4rem)] font-black text-[#1A1A1A] mb-1">{currentLetter}</h3>
+                      <p className={`text-[clamp(0.6rem,2vw,0.8rem)] font-bold uppercase tracking-widest ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
+                        {tiles[selectedIdx] === 'red' ? 'فريق أحمر' : tiles[selectedIdx] === 'green' ? 'فريق أخضر' : 'محايدة'}
+                      </p>
+                    </div>
+                      {currentQuestions.length > 0 && (
+                        <motion.div 
+                          key={qIdx}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 lg:p-6 shadow-[4px_4px_0_#1A1A1A] min-h-[120px] max-h-[250px] overflow-y-auto flex items-center justify-center text-center font-bold leading-relaxed break-words whitespace-normal scrollbar-thin scrollbar-thumb-gray-300 ${
+                            currentQ.q.length > 150 ? 'text-base lg:text-lg' : 'text-lg lg:text-xl'
+                          }`}
+                        >
+                          {currentQ.q}
+                        </motion.div>
+                      )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 shadow-[4px_4px_0_#1A1A1A]">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[clamp(0.6rem,1.5vw,0.75rem)] font-bold text-[#1A1A1A]">TIMER</span>
-                <motion.span key={timeLeft} animate={timeLeft <= 5 ? { scale: [1, 1.2, 1], color: '#EF4444' } : {}} className="text-[clamp(0.8rem,2vw,1rem)] font-black text-[#1A1A1A]">{timeLeft}s</motion.span>
-              </div>
-              <div className="h-3 lg:h-4 bg-gray-200 border-2 border-[#1A1A1A] rounded-full overflow-hidden mb-4">
-                <motion.div className="h-full" initial={false} animate={{ width: `${(timeLeft / timerDuration) * 100}%`, backgroundColor: timeLeft > 15 ? '#22C55E' : timeLeft > 5 ? '#FBBF24' : '#EF4444' }} />
-              </div>
-            </motion.div>
+              <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 shadow-[4px_4px_0_#1A1A1A]">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[clamp(0.6rem,1.5vw,0.75rem)] font-bold text-[#1A1A1A]">TIMER</span>
+                  <motion.span key={timeLeft} animate={timeLeft <= 5 ? { scale: [1, 1.2, 1], color: '#EF4444' } : {}} className="text-[clamp(0.8rem,2vw,1rem)] font-black text-[#1A1A1A]">{timeLeft}s</motion.span>
+                </div>
+                <div className="h-3 lg:h-4 bg-gray-200 border-2 border-[#1A1A1A] rounded-full overflow-hidden mb-4">
+                  <motion.div className="h-full" initial={false} animate={{ width: `${(timeLeft / timerDuration) * 100}%`, backgroundColor: timeLeft > 15 ? '#22C55E' : timeLeft > 5 ? '#FBBF24' : '#EF4444' }} />
+                </div>
+              </motion.div>
 
-            <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-3 shadow-[4px_4px_0_#1A1A1A] text-center">
-              <p className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-black text-gray-400 uppercase tracking-widest mb-1">Room Code</p>
-              <p className="text-[clamp(1rem,3vw,1.5rem)] font-black tracking-widest">{roomCode}</p>
-            </motion.div>
+              <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-3 shadow-[4px_4px_0_#1A1A1A] text-center">
+                <p className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-black text-gray-400 uppercase tracking-widest mb-1">Room Code</p>
+                <p className="text-[clamp(1rem,3vw,1.5rem)] font-black tracking-widest">{roomCode}</p>
+              </motion.div>
 
-            <motion.button initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} onClick={() => { playSound(SOUNDS.CLICK); setScreen('lobby'); socket?.disconnect(); setSocket(io()); }} className="w-full bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 mt-auto hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><LogOut size={16} /> خروج</motion.button>
-          </aside>
+              <motion.button initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} onClick={() => { playSound(SOUNDS.CLICK); setScreen('lobby'); socket?.disconnect(); setSocket(io()); }} className="w-full bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 mt-auto hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><LogOut size={16} /> خروج</motion.button>
+            </aside>
+          </div>
         </>
       )}
 
@@ -1412,7 +1652,7 @@ export default function App() {
 
       {/* Win Overlay */}
       <AnimatePresence>
-        {winner && (
+        {winner && !gameWinner && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1425,19 +1665,63 @@ export default function App() {
               className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-12 text-center shadow-[12px_12px_0_#1A1A1A] max-w-md w-full relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" />
-              <div className="text-8xl mb-6">🏆</div>
+              <div className="text-8xl mb-6">🏁</div>
               <h2 className={`text-5xl font-black mb-4 ${winner === 'red' ? 'text-[#EF4444]' : 'text-[#22C55E]'}`}>
-                الفريق {winner === 'red' ? 'الأحمر' : 'الأخضر'} فاز!
+                الفريق {winner === 'red' ? 'الأحمر' : 'الأخضر'} فاز بالجولة!
               </h2>
-              <p className="text-gray-500 font-bold mb-10">
-                {winner === 'red' ? 'ربط اليمين باليسار ✅' : 'ربط الأعلى بالأسفل ✅'}
+              <div className="flex justify-center gap-8 mb-10">
+                <div className="text-center">
+                  <p className="text-xs font-black text-gray-400 uppercase">Red</p>
+                  <p className="text-4xl font-black text-[#EF4444]">{scores.red}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-black text-gray-400 uppercase">Green</p>
+                  <p className="text-4xl font-black text-[#22C55E]">{scores.green}</p>
+                </div>
+              </div>
+              {isHost && (
+                <button 
+                  onClick={nextRound}
+                  className={`w-full border-4 border-[#1A1A1A] rounded-2xl py-5 text-2xl font-black text-white shadow-[6px_6px_0_#1A1A1A] transition-transform hover:scale-105 active:scale-95 ${winner === 'red' ? 'bg-[#EF4444]' : 'bg-[#22C55E]'}`}
+                >
+                  الجولة التالية ⏭️
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Game Win Overlay */}
+      <AnimatePresence>
+        {gameWinner && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+          >
+            <Confetti />
+            <motion.div 
+              initial={{ scale: 0.5, y: 100 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-12 text-center shadow-[12px_12px_0_#1A1A1A] max-w-md w-full relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 animate-pulse" />
+              <div className="text-9xl mb-6">🏆</div>
+              <h2 className={`text-6xl font-black mb-4 ${gameWinner === 'red' ? 'text-[#EF4444]' : 'text-[#22C55E]'}`}>
+                الفريق {gameWinner === 'red' ? 'الأحمر' : 'الأخضر'} بطل اللعبة!
+              </h2>
+              <p className="text-gray-500 font-bold mb-10 text-xl">
+                النتيجة النهائية: {scores.red} - {scores.green}
               </p>
-              <button 
-                onClick={resetGame}
-                className={`w-full border-4 border-[#1A1A1A] rounded-2xl py-5 text-2xl font-black text-white shadow-[6px_6px_0_#1A1A1A] transition-transform hover:scale-105 active:scale-95 ${winner === 'red' ? 'bg-[#EF4444]' : 'bg-[#22C55E]'}`}
-              >
-                🎮 لعبة جديدة
-              </button>
+              {isHost && (
+                <button 
+                  onClick={resetGame}
+                  className={`w-full border-4 border-[#1A1A1A] rounded-2xl py-6 text-3xl font-black text-white shadow-[8px_8px_0_#1A1A1A] transition-transform hover:scale-105 active:scale-95 ${gameWinner === 'red' ? 'bg-[#EF4444]' : 'bg-[#22C55E]'}`}
+                >
+                  🎮 العودة للبداية
+                </button>
+              )}
             </motion.div>
           </motion.div>
         )}

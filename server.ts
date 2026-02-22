@@ -6,7 +6,8 @@ import path from "path";
 import Database from "better-sqlite3";
 
 // Initialize Database
-const db = new Database("hroof.db");
+const dbPath = process.env.DATABASE_PATH || "hroof.db";
+const db = new Database(dbPath);
 
 // Create tables
 db.exec(`
@@ -36,7 +37,7 @@ async function startServer() {
     },
   });
 
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // --- API ROUTES ---
 
@@ -111,6 +112,9 @@ async function startServer() {
     hostId: string;
     questions?: any;
     hideQuestionsFromGuest: boolean;
+    scores: { red: number; green: number };
+    winCondition: number;
+    gameWinner: string | null;
     players: { id: string; name: string }[];
   }>();
 
@@ -128,6 +132,9 @@ async function startServer() {
         timerRunning: false,
         hostId: socket.id,
         hideQuestionsFromGuest: false,
+        scores: { red: 0, green: 0 },
+        winCondition: 3, // Default to Best of 5 (3 wins)
+        gameWinner: null,
         players: [{ id: socket.id, name: playerName }],
       });
       console.log(`Room created: ${roomCode} by ${playerName}`);
