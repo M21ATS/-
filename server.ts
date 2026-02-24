@@ -10,9 +10,29 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// تهيئة قاعدة البيانات - سيبحث عنها في المجلد الرئيسي
-const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "hroof.db");
+// تهيئة قاعدة البيانات - التأكد من استخدام القرص الثابت في Render
+const getDatabasePath = () => {
+  if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH;
+  if (process.env.NODE_ENV === "production") return "/data/hroof.db";
+  return path.join(process.cwd(), "hroof.db");
+};
+
+const dbPath = getDatabasePath();
+
+// التأكد من وجود المجلد إذا كان المسار في /data
+if (dbPath.startsWith("/data/")) {
+  const fs = await import("fs");
+  if (!fs.existsSync("/data")) {
+    try {
+      fs.mkdirSync("/data", { recursive: true });
+    } catch (err) {
+      console.error("Warning: Could not create /data directory, falling back to local storage");
+    }
+  }
+}
+
 const db = new Database(dbPath);
+console.log(`قاعدة البيانات تعمل على المسار: ${dbPath}`);
 
 // إنشاء الجداول إذا لم تكن موجودة
 db.exec(`
