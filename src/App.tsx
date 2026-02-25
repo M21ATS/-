@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
   Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX,
-  X, Settings
+  X, Settings, Copy
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import confetti from 'canvas-confetti';
@@ -17,11 +17,11 @@ import confetti from 'canvas-confetti';
    CONSTANTS & DATA
 ───────────────────────────────────────────────────────── */
 const INITIAL_LETTERS = [
-  'ض','ي','ص','أ','ش',
-  'ج','ح','ب','خ','ط',
-  'ه','د','ك','ل','ف',
-  'غ','ع','ذ','ظ','م',
-  'ق','ز','ت','س','ر',
+  'ز', 'ن', 'ح', 'ع', 'ل',
+  'ب', 'ت', 'ي', 'ظ', 'ر',
+  'ط', 'ق', 'س', 'ث', 'ه',
+  'خ', 'ف', 'ا', 'و', 'ش',
+  'ذ', 'ك', 'ج', 'ص', 'م'
 ];
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -34,7 +34,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 const FALLBACK_QUESTIONS: Record<string, { q: string; a: string }[]> = {
-'أ': [
+'ا': [
     { q: 'مرض عصبي يسبب تحلل خلايا المخ وفقدان الذاكرة؟', a: 'ألزهايمر' },
     { q: 'عنصر كيميائي غازي يمثل حوالي 21% من الهواء؟', a: 'أكسجين' },
     { q: 'أكبر شريان في جسم الإنسان ينطلق من القلب؟', a: 'أبهر' },
@@ -211,31 +211,7 @@ const FALLBACK_QUESTIONS: Record<string, { q: string; a: string }[]> = {
     { q: 'وصف للماء الكدِر الذي خالطه الطين؟', a: 'خاثر' },
     { q: 'عملية فصل الذهب عن التراب قديماً؟', a: 'خلص' }
   ],
-  'د': [
-    { q: 'علم دراسة إحصاءات السكان وتوزيعهم ونموهم؟', a: 'ديموغرافيا' },
-    { q: 'عاصمة جمهورية السنغال وأقصى نقطة غرب أفريقيا؟', a: 'داكار' },
-    { q: 'جهاز ميكانيكي يحول الحركة إلى تيار كهربائي؟', a: 'دينامو' },
-    { q: 'سلسلة من التفاعلات الكيميائية داخل الخلية لإنتاج الطاقة؟', a: 'دورة كريبس' },
-    { q: 'الغدة التي تفرز هرمون الثيروكسين في الرقبة؟', a: 'درقية' },
-    { q: 'أقدم عاصمة مأهولة في التاريخ وعاصمة سوريا؟', a: 'دمشق' },
-    { q: 'العملة الرسمية المتداولة في دولة فيتنام؟', a: 'دونغ' },
-    { q: 'عاصمة دولة تنزانيا الرسمية؟', a: 'دودوما' },
-    { q: 'عاصمة جمهورية أيرلندا؟', a: 'دبلن' },
-    { q: 'المركبات العضوية التي تخزن الطاقة في الجسم؟', a: 'دهون' },
-    { q: 'عاصمة دولة تيمور الشرقية؟', a: 'ديلي' },
-    { q: 'حركة الأجرام السماوية في مدارات حول مركز معين؟', a: 'دوران' },
-    { q: 'علم دراسة بقايا الكائنات والأحافير القديمة؟', a: 'دهريات' },
-    { q: 'مرض فيروسي ينتقل للإنسان عبر عض الحيوانات المصابة؟', a: 'داء الكلب' },
-    { q: 'وحدة قياس لوغاريتمية تستخدم للتعبير عن شدة الصوت؟', a: 'ديسيبل' },
-    { q: 'عنصر كيميائي فلزي نادِر رمزه Dy؟', a: 'ديسبروزيوم' },
-    { q: 'وحدة قياس القوة في نظام سنتيمتر غرام ثانية؟', a: 'داين' },
-    { q: 'المجلس التشريعي أو البرلمان في روسيا؟', a: 'دوما' },
-    { q: 'حيوان ثديي بحري ذكي جداً وصديق للإنسان؟', a: 'دلفين' },
-    { q: 'لقب كان يطلق على حكام الجزائر في العهد العثماني؟', a: 'داي' },
-    { q: 'مرض يصيب الجهاز التنفسي يسبب السعال الشديد؟', a: 'دفتيريا' },
-    { q: 'وصف للشخص شديد الحيلة والذكاء السياسي؟', a: 'داهية' },
-  ],
-'ذ': [
+  'ذ': [
     { q: 'أصغر جزء في العنصر الكيميائي يحمل خصائصه؟', a: 'ذرة' },
     { q: 'عدد الاهتزازات الكاملة التي يحدثها الجسم في الثانية الواحدة؟', a: 'ذبذبة' },
     { q: 'تحول المادة من الحالة الصلبة إلى السائلة بفعل الحرارة؟', a: 'ذوبان' },
@@ -395,33 +371,6 @@ const FALLBACK_QUESTIONS: Record<string, { q: string; a: string }[]> = {
     { q: 'عملية تصفية السوائل من الشوائب العالقة؟', a: 'صقل' },
     { q: 'معدن الصوان الذي كان يستخدم لصنع الأدوات قديماً؟', a: 'صوان' }
   ],
-  'ض': [
-    { q: 'القوة المؤثرة عمودياً على وحدة المساحة؟', a: 'ضغط' },
-    { q: 'ظاهرة جوية ناتجة عن تكثف بخار الماء قرب سطح الأرض؟', a: 'ضباب' },
-    { q: 'حيوان برمائي من رتبة عديمات الذيل يبدأ حياته في الماء؟', a: 'ضفدع' },
-    { q: 'الإشعاع الذي تدركه العين البشرية ويتيح الرؤية؟', a: 'ضوء' },
-    { q: 'مرض يصيب الأنسجة ويؤدي إلى نقص في حجمها أو قوتها؟', a: 'ضمور' },
-    { q: 'الاسم الذي يشتهر به لسان العرب لتميزه بهذا الحرف؟', a: 'ضاد' },
-    { q: 'عضو صلب في الفك يستخدم لتقطيع وطحن الطعام؟', a: 'ضرس' },
-    { q: 'الإحساس بالنبض الشديد في الرأس أو القلب؟', a: 'ضربان' },
-    { q: 'الحيوان المفترس الذي ينتمي للفصيلة الضبعية؟', a: 'ضبع' },
-    { q: 'عملية حسابية تكرر فيها القيمة بعدد مرات محددة؟', a: 'ضرب' },
-    { q: 'وصف للشخص الذي فقد نعمة البصر؟', a: 'ضرير' },
-    { q: 'النسيج القوي الذي يربط العظام ببعضها أو العضلات؟', a: 'ضمادة' },
-    { q: 'صوت الماء عند تدفقه بقوة في مجرى ضيق؟', a: 'ضجيج' },
-    { q: 'وصف للمكان الذي يفتقر للرحابة والاتساع؟', a: 'ضيق' },
-    { q: 'التيه والضياع عن الطريق الصحيح؟', a: 'ضلال' },
-    { q: 'وصف للمادة التي تسبب الأذى أو التسمم؟', a: 'ضارة' },
-    { q: 'القوة الناتجة عن ضغط الغازات داخل محرك؟', a: 'ضاغطة' },
-    { q: 'وصف للأرض البعيدة عن مركز المدينة؟', a: 'ضاحية' },
-    { q: 'عملية تحول النبات لاستخدام الطاقة الضوئية؟', a: 'ضوئي' },
-    { q: 'الالتزام القانوني بالتعويض عن الخسائر؟', a: 'ضمان' },
-    { q: 'وصف للشخص النحيل جداً والضعيف؟', a: 'ضاوٍ' },
-    { q: 'الاسم الذي يطلق على الخسارة الفادحة في المال؟', a: 'ضياع' },
-    { q: 'الحيوان الكاسر الذي يهاجم بضراوة؟', a: 'ضاري' },
-    { q: 'الألم النفسي الناتج عن الشعور بالظلم؟', a: 'ضيم' },
-    { q: 'العضو الذي يفرز المواد الهاضمة (في لغة قديمة)؟', a: 'ضاد' }
-  ],
   'ط': [
     { q: 'علم يدرس الأمراض وطرق الوقاية منها وعلاجها؟', a: 'طب' },
     { q: 'عاصمة دولة اليابان وأكبر منطقة حضرية في العالم؟', a: 'طوكيو' },
@@ -502,33 +451,6 @@ const FALLBACK_QUESTIONS: Record<string, { q: string; a: string }[]> = {
     { q: 'إناء معدني أو زجاجي يستخدم لحفظ الأطعمة؟', a: 'علبة' },
     { q: 'الاسم الذي يطلق على المادة التي لا تنقل الكهرباء؟', a: 'عازل' },
     { q: 'وصف للسرعة المتغيرة في الفيزياء؟', a: 'عجلة' }
-  ],
-  'غ': [
-    { q: 'حالة للمادة ليس لها شكل ثابت ولا حجم ثابت؟', a: 'غاز' },
-    { q: 'تجمع كثيف جداً من الأشجار والنباتات البرية؟', a: 'غابة' },
-    { q: 'عضو في جسم الإنسان يقوم بإفراز الهرمونات؟', a: 'غدة' },
-    { q: 'دولة أفريقية عاصمتها مدينة أكرا؟', a: 'غانا' },
-    { q: 'دولة أفريقية عاصمتها مدينة بانجول؟', a: 'غامبيا' },
-    { q: 'النسيج المرن الذي يغطي رؤوس العظام عند المفاصل؟', a: 'غضروف' },
-    { q: 'فقدان الوعي لفترة طويلة نتيجة إصابة أو مرض؟', a: 'غيبوبة' },
-    { q: 'الطبقة الغازية التي تحيط بالكرة الأرضية؟', a: 'غلاف جوي' },
-    { q: 'دولة أفريقية عاصمتها مدينة كوناكري؟', a: 'غينيا' },
-    { q: 'صوت الماء الجاري في النهر؟', a: 'غدير' },
-    { q: 'تحول السائل إلى بخار عند وصوله لدرجة حرارة عالية؟', a: 'غليان' },
-    { q: 'وصف للشخص الذي يمتلك أموالاً كثيرة؟', a: 'غني' },
-    { q: 'الغطاء الذي يحمي الثمرة أو البذرة؟', a: 'غلاف' },
-    { q: 'الوقت الذي تبدأ فيه الشمس بالاختفاء؟', a: 'غروب' },
-    { q: 'عملية تنظيف الثياب أو الجسم بالماء؟', a: 'غسل' },
-    { q: 'صوت الطيور عند الصباح؟', a: 'غريد' },
-    { q: 'وصف للأمر غير الواضح والمبهم؟', a: 'غامض' },
-    { q: 'الاسم الذي يطلق على فترة ما بعد الغروب؟', a: 'غسق' },
-    { q: 'الخداع في المعاملات للحصول على مكسب؟', a: 'غش' },
-    { q: 'تغطية المعدن بطبقة من الزنك لحمايته؟', a: 'غلفنة' },
-    { q: 'وصف للماء الكثير والواسع؟', a: 'غمر' },
-    { q: 'الاسم الذي يطلق على صغير الغنم؟', a: 'غريض' },
-    { q: 'الرغبة في النعمة دون تمني زوالها عن الآخر؟', a: 'غبطة' },
-    { q: 'وصف للزرع الكثيف الملتف؟', a: 'غدق' },
-    { q: 'طائر أسود اللون يشتهر بصوته المزعج؟', a: 'غراب' }
   ],
   'ف': [
     { q: 'علم يبحث في كواكب الفضاء والنجوم والمجرات؟', a: 'فلك' },
@@ -778,31 +700,44 @@ const TILE_COLORS = {
 };
 
 const SOUNDS = {
-  CLICK: 'https://cdn.pixabay.com/audio/2022/03/15/audio_78390a4361.mp3', // Pop click
-  WIN: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3', // Fanfare
-  TIMER: 'https://mixkit.imgix.net/sfx/preview/mixkit-clock-countdown-bleeps-916.mp3',
-  MARK: 'https://mixkit.imgix.net/sfx/preview/mixkit-positive-interface-click-1112.mp3',
-  NEW_GAME: 'https://mixkit.imgix.net/sfx/preview/mixkit-magical-sweep-transition-175.mp3',
-  JOIN: 'https://mixkit.imgix.net/sfx/preview/mixkit-modern-technology-select-3124.mp3',
-  LEAVE: 'https://mixkit.imgix.net/sfx/preview/mixkit-negative-answer-740.mp3',
-  ERROR: 'https://mixkit.imgix.net/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3',
-  SUCCESS: 'https://mixkit.imgix.net/sfx/preview/mixkit-success-bell-600.mp3',
-  CORRECT: 'https://cdn.pixabay.com/audio/2021/08/04/audio_bb430d53d1.mp3', // Ding
-  WRONG: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c35278d327.mp3', // Buzzer
-  NEXT_Q: 'https://mixkit.imgix.net/sfx/preview/mixkit-fast-double-click-on-mouse-2751.mp3',
-  SHOW_A: 'https://mixkit.imgix.net/sfx/preview/mixkit-interface-hint-notification-911.mp3',
-  UPLOAD: 'https://mixkit.imgix.net/sfx/preview/mixkit-software-interface-start-2574.mp3',
-  BG_MUSIC: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Subtle loop
+  CLICK: 'https://assets.mixkit.co/sfx/preview/mixkit-pop-click-menu-1130.mp3',
+  WIN: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
+  TIMER: 'https://assets.mixkit.co/sfx/preview/mixkit-clock-countdown-bleeps-916.mp3',
+  MARK: 'https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-click-1112.mp3',
+  NEW_GAME: 'https://assets.mixkit.co/sfx/preview/mixkit-magical-sweep-transition-175.mp3',
+  JOIN: 'https://assets.mixkit.co/sfx/preview/mixkit-modern-technology-select-3124.mp3',
+  LEAVE: 'https://assets.mixkit.co/sfx/preview/mixkit-negative-answer-740.mp3',
+  ERROR: 'https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3',
+  SUCCESS: 'https://assets.mixkit.co/sfx/preview/mixkit-success-bell-600.mp3',
+  CORRECT: 'https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-reward-952.mp3',
+  WRONG: 'https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3',
+  NEXT_Q: 'https://assets.mixkit.co/sfx/preview/mixkit-fast-double-click-on-mouse-2751.mp3',
+  SHOW_A: 'https://assets.mixkit.co/sfx/preview/mixkit-interface-hint-notification-911.mp3',
+  UPLOAD: 'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3',
+  SELECT_TILE: 'https://assets.mixkit.co/sfx/preview/mixkit-interface-click-1126.mp3',
+  DESELECT_TILE: 'https://assets.mixkit.co/sfx/preview/mixkit-selection-click-1109.mp3',
+  QUESTION_APPEAR: 'https://assets.mixkit.co/sfx/preview/mixkit-magic-notification-ring-2359.mp3',
+  BG_MUSIC: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
 };
 
 const playSound = (url: string) => {
-  const audio = new Audio(url);
-  audio.volume = 0.3;
-  audio.play().catch(() => {});
-  
-  // Haptic feedback for all sound-triggering actions (buttons, selections)
-  if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
-    window.navigator.vibrate(10);
+  try {
+    const audio = new Audio(url);
+    audio.volume = 1.0; // Max volume
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Silent catch for auto-play prevention
+      });
+    }
+    
+    // Haptic feedback
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(10);
+    }
+  } catch (e) {
+    // Silent catch
   }
 };
 
@@ -826,8 +761,6 @@ function parseTxt(text: string) {
       continue;
     }
     
-    if (!curLetter) continue;
-    
     // Match "س: ..." or "سؤال: ..."
     const qMatch = line.match(/^(?:س|سؤال|السؤال|Q|Question)\s*[:\-]\s*(.*)$/i);
     if (qMatch) {
@@ -838,7 +771,15 @@ function parseTxt(text: string) {
     // Match "ج: ..." or "جواب: ..."
     const aMatch = line.match(/^(?:ج|جواب|إجابة|الإجابة|A|Answer)\s*[:\-]\s*(.*)$/i);
     if (aMatch && pendingQ) {
-      res[curLetter].push({ q: pendingQ, a: aMatch[1].trim() });
+      const answer = aMatch[1].trim();
+      // Auto-categorize by first letter of answer if no curLetter
+      // We prioritize curLetter if it was explicitly set in the file (e.g. "الحرف: أ")
+      const targetLetter = curLetter || answer[0]; 
+      if (targetLetter) {
+        const normalizedLetter = targetLetter.toUpperCase();
+        if (!res[normalizedLetter]) res[normalizedLetter] = [];
+        res[normalizedLetter].push({ q: pendingQ, a: answer });
+      }
       pendingQ = null;
       continue;
     }
@@ -847,7 +788,13 @@ function parseTxt(text: string) {
     if ((line.includes('؟') || line.includes('?')) && !pendingQ) {
       const parts = line.split(/[؟?]/);
       if (parts.length >= 2 && parts[1].trim()) {
-        res[curLetter].push({ q: parts[0].trim() + (line.includes('؟') ? '؟' : '?'), a: parts[1].trim() });
+        const q = parts[0].trim() + (line.includes('؟') ? '؟' : '?');
+        const a = parts[1].trim();
+        const targetLetter = curLetter || a[0];
+        if (targetLetter) {
+          if (!res[targetLetter]) res[targetLetter] = [];
+          res[targetLetter].push({ q, a });
+        }
       }
     }
   }
@@ -956,13 +903,16 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.9 }}
       animate={isSelected ? { 
-        scale: 1.15,
-        filter: `drop-shadow(0 0 ${8 * cellSize}px ${colors.fill})`
+        scale: [1.1, 1.15, 1.1],
+        filter: `drop-shadow(0 0 ${12 * cellSize}px ${colors.fill})`
       } : { 
         scale: 1,
         filter: `drop-shadow(0 0 0px rgba(0,0,0,0))`
       }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      transition={isSelected ? {
+        scale: { repeat: Infinity, duration: 1.5, ease: "easeInOut" },
+        filter: { duration: 0.3 }
+      } : { type: 'spring', stiffness: 300, damping: 20 }}
     >
       <polygon points={pts} fill="rgba(0,0,0,0.12)" transform={`translate(${3 * cellSize},${4 * cellSize})`} />
       <polygon 
@@ -1096,7 +1046,22 @@ export default function App() {
   useEffect(() => {
     const handleResize = () => setIsLandscape(window.innerWidth > window.innerHeight);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    
+    // Prime audio on first interaction to unlock browser audio
+    const primeAudio = () => {
+      const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
+      silentAudio.play().catch(() => {});
+      window.removeEventListener('click', primeAudio);
+      window.removeEventListener('touchstart', primeAudio);
+    };
+    window.addEventListener('click', primeAudio);
+    window.addEventListener('touchstart', primeAudio);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('click', primeAudio);
+      window.removeEventListener('touchstart', primeAudio);
+    };
   }, []);
   const [bgMusicEnabled, setBgMusicEnabled] = useState(false);
   const [bgMusicAudio] = useState(() => {
@@ -1190,13 +1155,49 @@ export default function App() {
     }
     playSound(SOUNDS.CLICK);
   };
-  const handleBulkAdd = () => {
-    if (!editingLetter || !bulkText) return;
+  const handleBulkAdd = (forceAutoDistribute = false) => {
+    if (!bulkText) return;
+
+    // Word count limit (e.g., 5000 words to prevent performance issues)
+    const words = bulkText.trim().split(/\s+/);
+    if (words.length > 5000) {
+      playSound(SOUNDS.ERROR);
+      alert(`عذراً، النص طويل جداً (${words.length} كلمة). الحد الأقصى المسموح به هو 5000 كلمة في المرة الواحدة.`);
+      return;
+    }
+
     const lines = bulkText.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-    const newQuestions: { q: string; a: string }[] = [];
+    const updated = { ...questions };
     let currentQ: string | null = null;
+    let curLetterInText: string | null = null;
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    const addIfUnique = (letter: string, q: string, a: string) => {
+      const targetLetter = letter.toUpperCase();
+      if (!updated[targetLetter]) updated[targetLetter] = [];
+      
+      // Duplicate detection: check if question already exists for this letter
+      const isDuplicate = updated[targetLetter].some(
+        item => item.q.trim().toLowerCase() === q.trim().toLowerCase()
+      );
+
+      if (!isDuplicate) {
+        updated[targetLetter].push({ q: q.trim(), a: a.trim() });
+        addedCount++;
+      } else {
+        skippedCount++;
+      }
+    };
 
     for (const line of lines) {
+      // Check for letter header in bulk text
+      const letterMatch = line.match(/^(?:الحرف|حرف|Letter)\s*[:\-]?\s*([a-zA-Z\u0600-\u06FF])|^\s*([a-zA-Z\u0600-\u06FF])\s*[:\-]?$/i);
+      if (letterMatch) {
+        curLetterInText = (letterMatch[1] || letterMatch[2]).toUpperCase();
+        continue;
+      }
+
       const qMatch = line.match(/^(?:س|سؤال|السؤال|Q|Question)\s*[:\-]\s*(.*)$/i);
       if (qMatch) {
         currentQ = qMatch[1].trim();
@@ -1204,7 +1205,11 @@ export default function App() {
       }
       const aMatch = line.match(/^(?:ج|جواب|إجابة|الإجابة|A|Answer)\s*[:\-]\s*(.*)$/i);
       if (aMatch && currentQ) {
-        newQuestions.push({ q: currentQ, a: aMatch[1].trim() });
+        const answer = aMatch[1].trim();
+        const targetLetter = (curLetterInText || (!forceAutoDistribute ? editingLetter : null) || answer[0])?.toUpperCase();
+        if (targetLetter) {
+          addIfUnique(targetLetter, currentQ, answer);
+        }
         currentQ = null;
         continue;
       }
@@ -1212,21 +1217,32 @@ export default function App() {
       if (line.includes('؟') || line.includes('?')) {
         currentQ = line;
       } else if (currentQ) {
-        newQuestions.push({ q: currentQ, a: line });
+        const answer = line;
+        const targetLetter = (curLetterInText || (!forceAutoDistribute ? editingLetter : null) || answer[0])?.toUpperCase();
+        if (targetLetter) {
+          addIfUnique(targetLetter, currentQ, answer);
+        }
         currentQ = null;
       }
     }
 
-    if (newQuestions.length > 0) {
-      const updated = { ...questions };
-      if (!updated[editingLetter]) updated[editingLetter] = [];
-      updated[editingLetter] = [...updated[editingLetter], ...newQuestions];
+    if (addedCount > 0) {
       setQuestions(updated);
       broadcastState({ questions: updated });
       setBulkText("");
       playSound(SOUNDS.SUCCESS);
+      if (skippedCount > 0) {
+        alert(`تم إضافة ${addedCount} سؤال جديد. (تم تجاهل ${skippedCount} سؤال مكرر)`);
+      }
+    } else if (skippedCount > 0) {
+      playSound(SOUNDS.ERROR);
+      alert("جميع الأسئلة المكتوبة موجودة بالفعل في بنك الأسئلة!");
+    } else {
+      alert("لم يتم العثور على أسئلة صالحة لإضافتها.");
     }
   };
+
+  const [followHost, setFollowHost] = useState(true);
 
   useEffect(() => {
     const newSocket = io();
@@ -1235,7 +1251,16 @@ export default function App() {
     newSocket.on("room-state", (state) => {
       setTiles(state.tiles);
       if (state.letters && state.letters.length > 0) setLetters(state.letters);
-      setSelectedIdx(state.selectedIdx);
+      
+      // Only follow host if enabled
+      if (state.selectedIdx !== undefined) {
+        if (isHost) {
+          setSelectedIdx(state.selectedIdx);
+        } else if (followHost) {
+          setSelectedIdx(state.selectedIdx);
+        }
+      }
+
       setTimeLeft(state.timeLeft);
       setTimerRunning(state.timerRunning);
       if (state.hideQuestionsFromGuest !== undefined) setHideQuestionsFromGuest(state.hideQuestionsFromGuest);
@@ -1326,16 +1351,23 @@ export default function App() {
 
   const handleTileClick = (idx: number) => {
     if (!isHost) return;
-    const nextIdx = idx === selectedIdx ? -1 : idx;
+    const isDeselecting = idx === selectedIdx;
+    const nextIdx = isDeselecting ? -1 : idx;
     setSelectedIdx(nextIdx);
     
-    // Play sound when letter is pressed
-    playSound(SOUNDS.CLICK);
+    // Play sound for selection/deselection
+    if (isDeselecting) {
+      playSound(SOUNDS.DESELECT_TILE);
+    } else {
+      playSound(SOUNDS.SELECT_TILE);
+    }
     
     let nextQIdx = 0;
     if (nextIdx !== -1) {
       const letter = letters[nextIdx];
       nextQIdx = getRandomQuestionIdx(letter);
+      // Play question appear sound
+      setTimeout(() => playSound(SOUNDS.QUESTION_APPEAR), 100);
     }
     
     setQIdx(nextQIdx);
@@ -1632,37 +1664,42 @@ export default function App() {
     
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      const content = ev.target?.result as string;
-      if (!content) return;
+      try {
+        const content = ev.target?.result as string;
+        if (!content) return;
 
-      // Try JSON first, then fallback to TXT
-      let parsed = parseJson(content) || parseTxt(content);
+        // Try JSON first, then fallback to TXT
+        let parsed = parseJson(content) || parseTxt(content);
 
-      const count = Object.values(parsed).reduce((acc, curr) => acc + curr.length, 0);
-      if (count > 0) {
-        const bankName = file.name.split('.')[0] || `بنك ${Object.keys(banks).length + 1}`;
-        setBanks(prev => ({ ...prev, [bankName]: parsed }));
-        setSelectedBankName(bankName);
-        setQuestions(parsed);
-        setUploadSummary({ count, letters: Object.keys(parsed) });
-        broadcastState({ questions: parsed });
-        playSound(SOUNDS.SUCCESS);
+        const count = Object.values(parsed).reduce((acc, curr) => acc + curr.length, 0);
+        if (count > 0) {
+          const bankName = file.name.split('.')[0] || `بنك ${Object.keys(banks).length + 1}`;
+          setBanks(prev => ({ ...prev, [bankName]: parsed }));
+          setSelectedBankName(bankName);
+          setQuestions(parsed);
+          setUploadSummary({ count, letters: Object.keys(parsed) });
+          broadcastState({ questions: parsed });
+          playSound(SOUNDS.SUCCESS);
 
-        // Auto-save to cloud if logged in
-        if (user) {
-          try {
-            await fetch('/api/banks/save', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.id, name: bankName, data: parsed })
-            });
-          } catch (err) {
-            console.error("Failed to save bank to cloud", err);
+          // Auto-save to cloud if logged in
+          if (user) {
+            try {
+              await fetch('/api/banks/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id, name: bankName, data: parsed })
+              });
+            } catch (err) {
+              console.error("Failed to save bank to cloud", err);
+            }
           }
+        } else {
+          playSound(SOUNDS.ERROR);
+          alert("لم يتم العثور على أي أسئلة صالحة في الملف. تأكد من التنسيق (الحرف، س، ج)");
         }
-      } else {
-        playSound(SOUNDS.ERROR);
-        alert("لم يتم العثور على أي أسئلة صالحة في الملف. تأكد من التنسيق (الحرف، س، ج)");
+      } catch (err) {
+        console.error("File processing error:", err);
+        alert("حدث خطأ أثناء معالجة الملف.");
       }
     };
     
@@ -1891,6 +1928,13 @@ export default function App() {
                     <Plus size={12} />
                     <span>إنشاء يدوي</span>
                   </button>
+                  <button 
+                    onClick={() => { playSound(SOUNDS.SUCCESS); }}
+                    className="bg-green-500 text-white border-2 lg:border-4 border-[#1A1A1A] rounded-lg lg:rounded-xl py-1 lg:py-3 font-black shadow-[2px_2px_0_#1A1A1A] flex items-center justify-center gap-1 text-[8px] lg:text-sm"
+                  >
+                    <Music size={12} />
+                    <span>تجربة الصوت</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -2038,6 +2082,14 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col font-arabic relative overflow-hidden" dir="rtl">
+      {/* Hidden File Input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileUpload} 
+        className="hidden" 
+        accept=".txt,.json"
+      />
       {/* Dynamic Background with Blur */}
       <div 
         className={`absolute inset-0 ${currentTheme.bg} transition-all duration-1000 ease-in-out ${selectedIdx !== -1 ? 'blur-xl scale-110 opacity-60' : 'blur-0 scale-100 opacity-100'}`} 
@@ -2141,7 +2193,7 @@ export default function App() {
                     {/* Sticky Close Button */}
                     <div className="sticky top-0 z-50 flex justify-end mb-2">
                       <button 
-                        onClick={() => { playSound(SOUNDS.CLICK); setSelectedIdx(-1); }} 
+                        onClick={() => { playSound(SOUNDS.DESELECT_TILE); setSelectedIdx(-1); }} 
                         className="p-2 bg-white/90 backdrop-blur-sm rounded-full border-2 border-[#1A1A1A] shadow-md active:scale-95 transition-transform"
                       >
                         <X size={24} />
@@ -2164,18 +2216,32 @@ export default function App() {
                         <>
                           <div className="flex justify-between items-center px-2">
                             <span className="text-sm font-black text-gray-400">{usedQuestions[currentLetter]?.length || 0} / {currentQuestions.length}</span>
-                            <button 
-                              onClick={() => { 
-                                playSound(SOUNDS.NEXT_Q); 
-                                const nextIdx = getRandomQuestionIdx(currentLetter);
-                                setQIdx(nextIdx); 
-                                setShowAnswer(false); 
-                                broadcastState({ qIdx: nextIdx, showAnswer: false, usedQuestions: usedQuestions });
-                              }}
-                              className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform"
-                            >
-                              سؤال آخر 🔄
-                            </button>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => { 
+                                  playSound(SOUNDS.QUESTION_APPEAR); 
+                                  const nextIdx = getRandomQuestionIdx(currentLetter);
+                                  setQIdx(nextIdx); 
+                                  setShowAnswer(false); 
+                                  broadcastState({ qIdx: nextIdx, showAnswer: false, usedQuestions: usedQuestions });
+                                }}
+                                className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform"
+                              >
+                                سؤال آخر 🔄
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (currentQ) {
+                                    navigator.clipboard.writeText(currentQ.q);
+                                    playSound(SOUNDS.CLICK);
+                                  }
+                                }}
+                                className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform flex items-center gap-1"
+                                title="نسخ السؤال"
+                              >
+                                <Copy size={14} /> نسخ
+                              </button>
+                            </div>
                           </div>
 
                           <motion.div 
@@ -2455,72 +2521,13 @@ export default function App() {
           {/* Guest: Main Board on Left/Center (End in RTL) */}
           <motion.main 
             layout
-            className="flex-1 flex flex-col items-center justify-center p-1 lg:p-10 relative order-1 lg:order-1 overflow-hidden"
-            animate={{ scale: selectedIdx !== -1 ? 0.95 : 1 }}
+            className="flex-1 flex flex-col items-center justify-center p-1 lg:p-10 relative order-1 lg:order-1 overflow-hidden pt-32 lg:pt-48"
+            animate={{ 
+              scale: selectedIdx !== -1 ? 0.95 : 1,
+              y: selectedIdx !== -1 ? -40 : 0
+            }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
-            {/* MVP Section */}
-            <div className="mb-0.5 lg:mb-8 flex flex-col items-center gap-0.5 lg:gap-2 relative z-20 scale-90 lg:scale-100">
-              {mvp && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-yellow-100 border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl px-4 lg:px-6 py-1 lg:py-2 shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] flex items-center gap-2 lg:gap-3"
-                >
-                  <Trophy size={16} className="text-yellow-600" />
-                  <span className="font-black text-[10px] lg:text-sm">
-                    نجم اللقاء: {mvp[0]} ({mvp[1]} إجابة)
-                  </span>
-                </motion.div>
-              )}
-              {lastAnswerer && (
-                <motion.div 
-                  key={lastAnswerer}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-xs font-bold text-gray-500 italic"
-                >
-                  آخر من أجاب: {lastAnswerer} ✨
-                </motion.div>
-              )}
-            </div>
-
-            {/* Score Counter */}
-            <div className={`mb-2 lg:mb-8 flex items-center gap-4 lg:gap-12 ${currentTheme.board} border-4 lg:border-8 border-[#1A1A1A] rounded-2xl lg:rounded-[30px] px-4 lg:px-10 py-1 lg:py-4 shadow-[4px_4px_0_#1A1A1A] lg:shadow-[8px_8px_0_#1A1A1A] relative z-20 scale-75 lg:scale-100`}>
-              <div className="text-center">
-                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">{teamNames.red}</p>
-                <div className="flex gap-1.5 justify-center">
-                  {[...Array(winCondition)].map((_, i) => (
-                    <motion.div 
-                      key={`guest-red-dot-${i}`} 
-                      animate={scores.red > i ? { scale: [1, 1.3, 1], backgroundColor: '#EF4444' } : {}}
-                      className={`w-5 h-5 rounded-full border-2 border-[#1A1A1A] ${scores.red > i ? 'bg-red-500' : 'bg-gray-100'}`} 
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className={`text-4xl font-black ${currentTheme.text} flex flex-col items-center`}>
-                <span className="text-[10px] opacity-30 mb-[-4px]">SCORE</span>
-                <div className="flex items-center gap-4">
-                  <motion.span key={`guest-red-score-${scores.red}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.red}</motion.span>
-                  <span className="opacity-20">-</span>
-                  <motion.span key={`guest-green-score-${scores.green}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.green}</motion.span>
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1">{teamNames.green}</p>
-                <div className="flex gap-1.5 justify-center">
-                  {[...Array(winCondition)].map((_, i) => (
-                    <motion.div 
-                      key={`guest-green-dot-${i}`} 
-                      animate={scores.green > i ? { scale: [1, 1.3, 1], backgroundColor: '#22C55E' } : {}}
-                      className={`w-5 h-5 rounded-full border-2 border-[#1A1A1A] ${scores.green > i ? 'bg-green-500' : 'bg-gray-100'}`} 
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
             {/* Team Goal Indicators */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className={`absolute top-0 left-0 w-full h-6 lg:h-8 ${theme === 'night' ? 'bg-green-500/20' : 'bg-green-500/10'} border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center`}>
@@ -2594,13 +2601,27 @@ export default function App() {
                   <div className="sticky top-0 z-50 flex justify-end mb-2">
                     <button 
                       onClick={() => { 
-                        playSound(SOUNDS.CLICK); 
-                        if (selectedIdx !== -1) setSelectedIdx(-1);
-                        else setShowControlsMobile(false);
+                        if (selectedIdx !== -1) {
+                          playSound(SOUNDS.DESELECT_TILE);
+                          setSelectedIdx(-1);
+                        } else {
+                          playSound(SOUNDS.CLICK);
+                          setShowControlsMobile(false);
+                        }
                       }} 
                       className="p-2 bg-white/90 backdrop-blur-sm rounded-full border-2 border-[#1A1A1A] shadow-md active:scale-95 transition-transform"
                     >
                       <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 shadow-[4px_4px_0_#1A1A1A]">
+                    <span className="text-sm font-black">متابعة المضيف</span>
+                    <button 
+                      onClick={() => { playSound(SOUNDS.CLICK); setFollowHost(!followHost); }}
+                      className={`px-4 py-2 rounded-xl border-2 border-[#1A1A1A] font-black transition-all ${followHost ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+                    >
+                      {followHost ? 'مفعل' : 'معطل'}
                     </button>
                   </div>
 
@@ -2625,16 +2646,29 @@ export default function App() {
                         </p>
                       </div>
                       {currentQuestions.length > 0 && (
-                        <motion.div 
-                          key={qIdx}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className={`bg-white border-4 border-[#1A1A1A] rounded-[24px] p-6 lg:p-8 shadow-[8px_8px_0_#1A1A1A] min-h-[160px] flex items-center justify-center text-center font-black leading-tight ${
-                            currentQ.q.length > 100 ? 'text-lg lg:text-xl' : 'text-2xl lg:text-3xl'
-                          }`}
-                        >
-                          {currentQ.q}
-                        </motion.div>
+                        <div className="flex flex-col gap-4">
+                          <div className="flex justify-end">
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(currentQ.q);
+                                playSound(SOUNDS.CLICK);
+                              }}
+                              className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform flex items-center gap-1"
+                            >
+                              <Copy size={14} /> نسخ السؤال
+                            </button>
+                          </div>
+                          <motion.div 
+                            key={qIdx}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className={`bg-white border-4 border-[#1A1A1A] rounded-[24px] p-6 lg:p-8 shadow-[8px_8px_0_#1A1A1A] min-h-[160px] flex items-center justify-center text-center font-black leading-tight ${
+                              currentQ.q.length > 100 ? 'text-lg lg:text-xl' : 'text-2xl lg:text-3xl'
+                            }`}
+                          >
+                            {currentQ.q}
+                          </motion.div>
+                        </div>
                       )}
                     </motion.div>
                   )}
@@ -2932,6 +2966,13 @@ export default function App() {
               <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
                 {/* Letters List */}
                 <div className="w-full lg:w-48 overflow-y-auto border-4 border-[#1A1A1A] rounded-2xl p-2 flex lg:flex-col gap-2 bg-gray-50">
+                  <button 
+                    onClick={() => setEditingLetter(null)}
+                    className={`px-4 py-3 rounded-xl border-2 border-[#1A1A1A] font-black transition-all flex items-center justify-center gap-2 ${editingLetter === null ? 'bg-blue-600 text-white shadow-[2px_2px_0_#1A1A1A]' : 'bg-white text-blue-600 hover:bg-blue-50 shadow-[2px_2px_0_#1A1A1A]'}`}
+                  >
+                    <FileUp size={18} /> إضافة جماعية
+                  </button>
+                  <div className="h-px bg-gray-200 my-1 hidden lg:block" />
                   {INITIAL_LETTERS.sort().map(l => (
                     <button 
                       key={l} 
@@ -2966,10 +3007,21 @@ export default function App() {
                           />
                           <button 
                             onClick={() => {
-                              if (newQ && newA) {
+                              if (newQ && newA && editingLetter) {
                                 const updated = { ...questions };
                                 if (!updated[editingLetter]) updated[editingLetter] = [];
-                                updated[editingLetter].push({ q: newQ, a: newA });
+                                
+                                const isDuplicate = updated[editingLetter].some(
+                                  item => item.q.trim().toLowerCase() === newQ.trim().toLowerCase()
+                                );
+
+                                if (isDuplicate) {
+                                  playSound(SOUNDS.ERROR);
+                                  alert("هذا السؤال موجود بالفعل لهذا الحرف!");
+                                  return;
+                                }
+
+                                updated[editingLetter].push({ q: newQ.trim(), a: newA.trim() });
                                 setQuestions(updated);
                                 broadcastState({ questions: updated });
                                 setNewQ(""); setNewA("");
@@ -2990,12 +3042,20 @@ export default function App() {
                             onChange={(e) => setBulkText(e.target.value)}
                             className="border-2 border-[#1A1A1A] rounded-xl px-4 py-2 outline-none text-xs h-24 resize-none"
                           />
-                          <button 
-                            onClick={handleBulkAdd}
-                            className="bg-[#3B82F6] text-white border-4 border-[#1A1A1A] rounded-xl py-2 font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform text-sm"
-                          >
-                            إضافة الكل 🚀
-                          </button>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleBulkAdd(false)}
+                              className="flex-1 bg-[#1A1A1A] text-white py-3 rounded-xl font-black shadow-[2px_2px_0_#444] hover:scale-105 active:scale-95 transition-transform text-xs"
+                            >
+                              إضافة للحرف الحالي ({editingLetter})
+                            </button>
+                            <button 
+                              onClick={() => handleBulkAdd(true)}
+                              className="flex-1 bg-[#3B82F6] text-white py-3 rounded-xl font-black shadow-[2px_2px_0_#1E40AF] hover:scale-105 active:scale-95 transition-transform text-xs"
+                            >
+                              توزيع تلقائي على الحروف 🚀
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -3045,8 +3105,36 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-400 font-bold text-xl italic bg-gray-50 border-4 border-dashed border-[#1A1A1A]/10 rounded-3xl">
-                      اختر حرفاً من القائمة للبدء بالتعديل...
+                    <div className="flex-1 flex flex-col gap-6 overflow-y-auto p-2">
+                      <div className="bg-blue-50 border-4 border-blue-600 rounded-[32px] p-8 text-center shadow-[8px_8px_0_#1E40AF]">
+                        <h3 className="text-2xl font-black text-blue-900 mb-2">الإضافة الجماعية الذكية 🚀</h3>
+                        <p className="text-blue-700 font-bold">الصق قائمة طويلة من الأسئلة هنا، وسيقوم النظام بتوزيعها تلقائياً على الحروف بناءً على أول حرف من الإجابة!</p>
+                      </div>
+
+                      <div className="bg-white border-4 border-[#1A1A1A] rounded-[24px] p-6 shadow-[8px_8px_0_#1A1A1A] flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-black text-lg">نص الأسئلة</h4>
+                          <span className="text-xs font-bold text-gray-400">تنسيق: س: السؤال؟ ج: الجواب</span>
+                        </div>
+                        <textarea 
+                          placeholder="س: ما هو الحيوان الذي يبدأ بحرف الغين؟&#10;ج: غزال&#10;&#10;س: فاكهة تبدأ بحرف الميم؟&#10;ج: موز"
+                          value={bulkText}
+                          onChange={(e) => setBulkText(e.target.value)}
+                          className="border-4 border-[#1A1A1A] rounded-2xl px-6 py-4 outline-none text-sm h-64 resize-none font-bold"
+                        />
+                        <button 
+                          onClick={() => handleBulkAdd(true)}
+                          className="w-full bg-blue-600 text-white border-4 border-[#1A1A1A] rounded-2xl py-4 font-black shadow-[6px_6px_0_#1E40AF] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform text-xl"
+                        >
+                          توزيع وحفظ جميع الأسئلة ✅
+                        </button>
+                      </div>
+
+                      <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center">
+                        <p className="text-gray-500 text-sm font-bold italic">
+                          نصيحة: يمكنك أيضاً كتابة "الحرف: أ" قبل مجموعة من الأسئلة ليتم إضافتها جميعاً لهذا الحرف مباشرة.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
