@@ -110,6 +110,16 @@ async function startServer() {
     res.json({ success: true, banks });
   });
 
+  app.delete("/api/banks/:userId/:name", (req, res) => {
+    const { userId, name } = req.params;
+    try {
+      db.prepare("DELETE FROM banks WHERE user_id = ? AND name = ?").run(userId, name);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false });
+    }
+  });
+
   // --- نظام الغرف (Socket.io) ---
 
   const rooms = new Map<string, any>();

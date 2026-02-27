@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
   Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX,
-  X, Settings, Copy
+  X, Settings, Copy, HelpCircle
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import confetti from 'canvas-confetti';
@@ -32,6 +32,77 @@ function shuffleArray<T>(array: T[]): T[] {
   }
   return shuffled;
 }
+
+const PRESET_BANKS: Record<string, Record<string, { q: string; a: string }[]>> = {
+  "عالم البنات 💅": {
+    "ا": [
+      { q: "نوع من أنواع المكياج يوضع على الشفاه؟", a: "أحمر شفاه" },
+      { q: "مصممة أزياء عالمية شهيرة (كوكو ...)؟", a: "أزياء" },
+      { q: "لقب يطلق على ابنة الملك؟", a: "أميرة" }
+    ],
+    "ب": [
+      { q: "أكلة شعبية مصرية حلوة تصنع من السميد؟", a: "بسبوسة" },
+      { q: "دمية شهيرة جداً لها عالمها الخاص؟", a: "باربي" },
+      { q: "قطعة ملابس توضع على الرأس للزينة؟", a: "باندة" }
+    ],
+    "ت": [
+      { q: "قطعة ملابس نسائية تلبس من الخصر للأسفل؟", a: "تنورة" },
+      { q: "طريقة تصفيف الشعر؟", a: "تسريحة" },
+      { q: "مستحضرات تستخدم لتحسين المظهر؟", a: "تجميل" }
+    ]
+  },
+  "عالم الأولاد ⚽": {
+    "ا": [
+      { q: "نادي إنجليزي شهير يلقب بالمدفعجية؟", a: "أرسنال" },
+      { q: "لعبة فيديو شهيرة من شركة بليزارد؟", a: "أوفرواتش" },
+      { q: "أسرع عداء في التاريخ (يوسين ...)؟", a: "أوسين بولت" }
+    ],
+    "ب": [
+      { q: "نادي إسباني يلقب بالبلوغرانا؟", a: "برشلونة" },
+      { q: "سيارة رياضية فائقة السرعة من إنتاج فرنسي؟", a: "بوغاتي" },
+      { q: "جهاز ألعاب فيديو من شركة سوني? ", a: "بلايستيشن" }
+    ],
+    "ت": [
+      { q: "نظام يزيد من قوة محرك السيارة؟", a: "تيربو" },
+      { q: "لعبة قتال شهيرة جداً؟", a: "تيكن" },
+      { q: "خطة يضعها المدرب للفوز بالمباراة؟", a: "تكتيك" }
+    ]
+  },
+  "العلوم والفيزياء 🧪": {
+    "ا": [
+      { q: "وحدة قياس التيار الكهربائي؟", a: "أمبير" },
+      { q: "غاز ضروري لعملية التنفس؟", a: "أكسجين" },
+      { q: "أصغر وحدة في المادة؟", a: "ذرة" }
+    ],
+    "ب": [
+      { q: "علم دراسة الكائنات الحية؟", a: "بيولوجيا" },
+      { q: "كائنات دقيقة وحيدة الخلية؟", a: "بكتيريا" },
+      { q: "جهاز يقيس الضغط الجوي؟", a: "بارومتر" }
+    ],
+    "ت": [
+      { q: "معدل تغير السرعة؟", a: "تسارع" },
+      { q: "عملية كيميائية تنتج مواد جديدة؟", a: "تفاعل" },
+      { q: "مرصد فلكي لرؤية النجوم؟", a: "تلسكوب" }
+    ]
+  },
+  "ثقافة إسلامية 🌙": {
+    "ا": [
+      { q: "أول الخلفاء الراشدين؟", a: "أبو بكر الصديق" },
+      { q: "نبي الله الذي صبر على المرض؟", a: "أيوب" },
+      { q: "أول مؤذن في الإسلام؟", a: "بلال بن رباح" }
+    ],
+    "ب": [
+      { q: "البيت الحرام الذي يحج إليه المسلمون؟", a: "بيت الله" },
+      { q: "غزوة شهيرة وقعت في رمضان؟", a: "بدر" },
+      { q: "اسم ناقة الرسول صلى الله عليه وسلم؟", a: "القصواء" }
+    ],
+    "ت": [
+      { q: "كتاب الله المنزل على محمد صلى الله عليه وسلم؟", a: "تنزيل" },
+      { q: "عملية قراءة القرآن بخشوع؟", a: "ترتيل" },
+      { q: "الخوف من الله والعمل بطاعته؟", a: "تقوى" }
+    ]
+  }
+};
 
 const FALLBACK_QUESTIONS: Record<string, { q: string; a: string }[]> = {
 'ا': [
@@ -881,7 +952,7 @@ function checkWin(tiles: string[], team: 'red' | 'green') {
    COMPONENTS
 ───────────────────────────────────────────────────────── */
 
-const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 1 }: any) => {
+const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 1, isUsed = false }: any) => {
   const baseW = 88, baseH = 99;
   const HW = baseW * cellSize, HH = baseH * cellSize;
   const pts = (() => {
@@ -951,6 +1022,12 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 
             >
               {letter}
             </span>
+            {isUsed && state === 'neutral' && (
+              <div 
+                className="absolute -top-1 -right-1 w-2 h-2 lg:w-3 lg:h-3 bg-blue-500 rounded-full border border-white shadow-sm"
+                title="تم استخدام هذا الحرف"
+              />
+            )}
           </motion.div>
         </div>
       </foreignObject>
@@ -1074,14 +1151,17 @@ export default function App() {
   // Banks Management
   const [banks, setBanks] = useState<Record<string, Record<string, { q: string; a: string }[]>>>(() => {
     const saved = localStorage.getItem('hroof_banks');
+    const initialBanks = { "الأسئلة الافتراضية": FALLBACK_QUESTIONS, ...PRESET_BANKS };
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Merge saved banks with presets, ensuring presets are always available
+        return { ...initialBanks, ...parsed };
       } catch (e) {
-        return { "الأسئلة الافتراضية": FALLBACK_QUESTIONS };
+        return initialBanks;
       }
     }
-    return { "الأسئلة الافتراضية": FALLBACK_QUESTIONS };
+    return initialBanks;
   });
 
   useEffect(() => {
@@ -1100,11 +1180,50 @@ export default function App() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [uploadSummary, setUploadSummary] = useState<{ count: number; letters: string[] } | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  useEffect(() => {
+    if (isEditorOpen) setEditorBankName(selectedBankName);
+  }, [isEditorOpen, selectedBankName]);
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [bankToDelete, setBankToDelete] = useState<string | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string } | null>(() => {
+    const saved = localStorage.getItem('hroof_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('hroof_user', JSON.stringify(user));
+      // Load user banks from cloud
+      const loadBanks = async () => {
+        try {
+          const res = await fetch(`/api/banks/${user.id}`);
+          const data = await res.json();
+          if (data.success) {
+            setBanks(prev => ({ ...prev, ...data.banks }));
+          }
+        } catch (err) {
+          console.error("Failed to load cloud banks", err);
+        }
+      };
+      loadBanks();
+    } else {
+      localStorage.removeItem('hroof_user');
+    }
+  }, [user]);
+
+  // Auto-sync editor changes to local banks collection
+  useEffect(() => {
+    if (isEditorOpen && selectedBankName && selectedBankName !== "الأسئلة الافتراضية") {
+      setBanks(prev => ({ ...prev, [selectedBankName]: questions }));
+    }
+  }, [questions, isEditorOpen, selectedBankName]);
+
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [editingLetter, setEditingLetter] = useState<string | null>(null);
+  const [editorBankName, setEditorBankName] = useState(selectedBankName);
   const [newQ, setNewQ] = useState("");
   const [newA, setNewA] = useState("");
 
@@ -1127,12 +1246,6 @@ export default function App() {
         setIsAuthOpen(false);
         setScreen('lobby');
         playSound(SOUNDS.SUCCESS);
-        // Load user banks
-        const banksRes = await fetch(`/api/banks/${data.userId}`);
-        const banksData = await banksRes.json();
-        if (banksData.success) {
-          setBanks(prev => ({ ...prev, ...banksData.banks }));
-        }
       } else {
         alert(data.error);
       }
@@ -1142,7 +1255,10 @@ export default function App() {
   };
 
   const deleteBank = async (name: string) => {
-    if (!confirm(`هل أنت متأكد من حذف بنك (${name})؟`)) return;
+    if (name === "الأسئلة الافتراضية" || !!PRESET_BANKS[name]) {
+      alert("لا يمكن حذف البنوك الثابتة!");
+      return;
+    }
     const updated = { ...banks };
     delete updated[name];
     setBanks(updated);
@@ -1269,7 +1385,12 @@ export default function App() {
       if (state.scores) setScores(state.scores);
       if (state.winCondition) setWinCondition(state.winCondition);
       if (state.gameWinner !== undefined) setGameWinner(state.gameWinner);
-      if (state.cellSize) setCellSize(state.cellSize);
+      if (state.cellSize) {
+        // cellSize is now a local preference, but we keep the listener 
+        // for backward compatibility or if we want to sync it optionally.
+        // However, the user wants it local, so we'll comment this out.
+        // setCellSize(state.cellSize);
+      }
       if (state.screen) setScreen(state.screen);
       if (state.qIdx !== undefined) setQIdx(state.qIdx);
       if (state.showAnswer !== undefined) setShowAnswer(state.showAnswer);
@@ -1493,6 +1614,12 @@ export default function App() {
 
         if (newScores[t] >= winCondition) {
           setGameWinner(t);
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: t === 'red' ? ['#EF4444', '#ffffff'] : ['#22C55E', '#ffffff']
+          });
           broadcastState({ 
             winner: t, 
             scores: newScores, 
@@ -1621,6 +1748,8 @@ export default function App() {
       teams: teams,
       playerStats: {},
       theme: theme,
+      winCondition: winCondition,
+      timerDuration: timerDuration,
       matchLog: []
     });
     setScreen('game');
@@ -1721,7 +1850,11 @@ export default function App() {
                 <p className="font-black text-xs lg:text-base text-[#1A1A1A]">{user.username}</p>
               </div>
               <button 
-                onClick={() => { setUser(null); playSound(SOUNDS.CLICK); }}
+                onClick={() => { 
+                  setUser(null); 
+                  setBanks({ "الأسئلة الافتراضية": FALLBACK_QUESTIONS, ...PRESET_BANKS });
+                  playSound(SOUNDS.CLICK); 
+                }}
                 className="text-red-500 hover:scale-110 transition-transform"
               >
                 <LogOut size={16} />
@@ -1753,22 +1886,39 @@ export default function App() {
             <div className="flex flex-col gap-0.5 lg:gap-3 overflow-hidden">
               <h2 className="text-[10px] lg:text-lg font-black flex items-center gap-1 lg:gap-2"><Music size={12} /> بنوك الأسئلة</h2>
               <div className="flex-1 overflow-y-auto border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl p-1 lg:p-4 flex flex-col gap-1 bg-gray-50 custom-scrollbar">
-                {Object.keys(banks).map(name => (
-                  <div key={name} className="relative group">
-                    <button 
-                      onClick={() => {
-                        setSelectedBankName(name);
-                        setQuestions(banks[name]);
-                        broadcastState({ questions: banks[name] });
-                        playSound(SOUNDS.CLICK);
-                      }}
-                      className={`w-full p-1 lg:p-3 rounded-lg border-2 lg:border-4 border-[#1A1A1A] font-black text-right transition-all flex justify-between items-center ${selectedBankName === name ? 'bg-[#1A1A1A] text-white shadow-[2px_2px_0_#22C55E]' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
-                    >
-                      <span className="text-[8px] lg:text-sm truncate ml-1">{name}</span>
-                      <span className="text-[7px] lg:text-xs opacity-60">{(Object.values(banks[name]) as any[]).reduce((a, b) => a + b.length, 0)}</span>
-                    </button>
-                  </div>
-                ))}
+                {Object.keys(banks).map(name => {
+                  const isPreset = name === "الأسئلة الافتراضية" || !!PRESET_BANKS[name];
+                  return (
+                    <div key={name} className="relative group">
+                      <button 
+                        onClick={() => {
+                          setSelectedBankName(name);
+                          setQuestions(banks[name]);
+                          broadcastState({ questions: banks[name] });
+                          playSound(SOUNDS.CLICK);
+                        }}
+                        className={`w-full p-1 lg:p-3 rounded-lg border-2 lg:border-4 border-[#1A1A1A] font-black text-right transition-all flex justify-between items-center ${selectedBankName === name ? 'bg-[#1A1A1A] text-white shadow-[2px_2px_0_#22C55E]' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
+                      >
+                        <div className="flex items-center gap-1 truncate">
+                          {isPreset && <span className="text-[6px] lg:text-[8px] bg-blue-500 text-white px-1 rounded">ثابت</span>}
+                          <span className="text-[8px] lg:text-sm truncate">{name}</span>
+                        </div>
+                        <span className="text-[7px] lg:text-xs opacity-60">{(Object.values(banks[name]) as any[]).reduce((a, b) => a + b.length, 0)}</span>
+                      </button>
+                      {!isPreset && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBankToDelete(name);
+                          }}
+                          className="absolute -left-1 -top-1 w-4 h-4 lg:w-6 lg:h-6 bg-red-500 text-white rounded-full border-2 border-[#1A1A1A] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -1897,16 +2047,40 @@ export default function App() {
                 </div>
 
                 {/* Win Condition Section */}
-                <div className="flex flex-col gap-0.5 lg:gap-2 p-1 lg:p-3 bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-lg lg:rounded-xl">
-                  <span className="font-black text-[8px] lg:text-sm">الفوز</span>
-                  <div className="flex justify-between gap-0.5 lg:gap-2">
+                <div className="flex flex-col gap-2 p-3 bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl">
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-[10px] lg:text-sm">شرط الفوز (جولات)</span>
+                    <span className="text-[10px] lg:text-sm font-black text-blue-600">{winCondition === 1 ? 'جولة واحدة' : winCondition*2-1 + ' جولات'}</span>
+                  </div>
+                  <div className="flex justify-between gap-1 lg:gap-2">
                     {[1, 2, 3, 4, 5].map(w => (
                       <button 
                         key={w}
+                        disabled={!isHost}
                         onClick={() => { setWinCondition(w); broadcastState({ winCondition: w }); playSound(SOUNDS.CLICK); }}
-                        className={`flex-1 h-5 lg:h-8 border-2 lg:border-4 border-[#1A1A1A] rounded-md lg:rounded-lg font-black text-[8px] lg:text-sm transition-all ${winCondition === w ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A]'}`}
+                        className={`flex-1 h-6 lg:h-10 border-2 lg:border-4 border-[#1A1A1A] rounded-lg font-black text-[8px] lg:text-sm transition-all ${winCondition === w ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
                       >
                         {w === 1 ? '1' : w*2-1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timer Duration Section */}
+                <div className="flex flex-col gap-2 p-3 bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl">
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-[10px] lg:text-sm">وقت الإجابة (ثانية)</span>
+                    <span className="text-[10px] lg:text-sm font-black text-orange-500">{timerDuration} ث</span>
+                  </div>
+                  <div className="flex justify-between gap-1 lg:gap-2">
+                    {[15, 30, 45, 60, 0].map(t => (
+                      <button 
+                        key={t}
+                        disabled={!isHost}
+                        onClick={() => { setTimerDuration(t); setTimeLeft(t); broadcastState({ timerDuration: t, timeLeft: t }); playSound(SOUNDS.CLICK); }}
+                        className={`flex-1 h-6 lg:h-10 border-2 lg:border-4 border-[#1A1A1A] rounded-lg font-black text-[8px] lg:text-sm transition-all ${timerDuration === t ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
+                      >
+                        {t === 0 ? '∞' : t}
                       </button>
                     ))}
                   </div>
@@ -1934,6 +2108,13 @@ export default function App() {
                   >
                     <Music size={12} />
                     <span>تجربة الصوت</span>
+                  </button>
+                  <button 
+                    onClick={() => { playSound(SOUNDS.CLICK); setShowTutorial(true); }}
+                    className="bg-purple-500 text-white border-2 lg:border-4 border-[#1A1A1A] rounded-lg lg:rounded-xl py-1 lg:py-3 font-black shadow-[2px_2px_0_#1A1A1A] flex items-center justify-center gap-1 text-[8px] lg:text-sm"
+                  >
+                    <HelpCircle size={12} />
+                    <span>كيفية اللعب؟</span>
                   </button>
                 </div>
               </div>
@@ -2323,7 +2504,7 @@ export default function App() {
 
             <svg 
               viewBox={`0 0 ${550 * cellSize} ${500 * cellSize}`} 
-              className="w-full max-w-[600px] drop-shadow-2xl overflow-visible relative z-10"
+              className="w-full max-w-[600px] max-h-[60vh] lg:max-h-[70vh] drop-shadow-2xl overflow-visible relative z-10"
               style={{ maxWidth: `${600 * cellSize}px` }}
             >
               {Array.from({ length: 25 }).map((_, idx) => {
@@ -2345,6 +2526,7 @@ export default function App() {
                       onClick={() => handleTileClick(idx)}
                       fontSize={fontSize}
                       cellSize={cellSize}
+                      isUsed={(usedQuestions[letters[idx]]?.length || 0) > 0}
                     />
                   </g>
                 );
@@ -2395,8 +2577,8 @@ export default function App() {
                 <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
                   <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">حجم الخلية</span>
                   <div className="flex gap-2">
-                    <button onClick={() => { const next = Math.max(0.5, cellSize - 0.1); setCellSize(next); broadcastState({ cellSize: next }); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
-                    <button onClick={() => { const next = Math.min(2, cellSize + 0.1); setCellSize(next); broadcastState({ cellSize: next }); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
+                    <button onClick={() => { const next = Math.max(0.5, cellSize - 0.1); setCellSize(next); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
+                    <button onClick={() => { const next = Math.min(2, cellSize + 0.1); setCellSize(next); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
@@ -2546,7 +2728,7 @@ export default function App() {
 
             <svg 
               viewBox={`0 0 ${550 * cellSize} ${500 * cellSize}`} 
-              className="w-full max-w-[700px] drop-shadow-2xl overflow-visible relative z-10"
+              className="w-full max-w-[700px] max-h-[60vh] lg:max-h-[70vh] drop-shadow-2xl overflow-visible relative z-10"
               style={{ maxWidth: `${700 * cellSize}px` }}
             >
               {Array.from({ length: 25 }).map((_, idx) => {
@@ -2568,6 +2750,7 @@ export default function App() {
                       onClick={() => handleTileClick(idx)}
                       fontSize={fontSize}
                       cellSize={cellSize}
+                      isUsed={(usedQuestions[letters[idx]]?.length || 0) > 0}
                     />
                   </g>
                 );
@@ -2922,6 +3105,101 @@ export default function App() {
 
       {/* Question Editor Modal */}
       <AnimatePresence>
+        {bankToDelete && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-8 lg:p-12 shadow-[12px_12px_0_#1A1A1A] w-full max-w-md text-center flex flex-col gap-6"
+            >
+              <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto border-4 border-red-200">
+                <Trash2 size={40} />
+              </div>
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-black mb-2">حذف بنك الأسئلة؟</h2>
+                <p className="text-gray-500 font-bold">هل أنت متأكد من حذف بنك <span className="text-red-600">({bankToDelete})</span>؟ لا يمكن التراجع عن هذا الإجراء.</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    deleteBank(bankToDelete);
+                    setBankToDelete(null);
+                  }}
+                  className="w-full bg-red-500 text-white py-4 rounded-2xl font-black text-xl shadow-[4px_4px_0_#991B1B] hover:scale-105 active:scale-95 transition-transform"
+                >
+                  نعم، احذف 🗑️
+                </button>
+                <button 
+                  onClick={() => setBankToDelete(null)}
+                  className="w-full bg-gray-100 text-[#1A1A1A] py-4 rounded-2xl font-black text-xl border-4 border-[#1A1A1A] hover:scale-105 active:scale-95 transition-transform"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showTutorial && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-6 lg:p-10 shadow-[12px_12px_0_#1A1A1A] w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col gap-6"
+            >
+              <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-black">كيفية اللعب 📖</h2>
+                <button onClick={() => setShowTutorial(false)} className="text-gray-400 hover:text-red-500 transition-colors">
+                  <X size={32} />
+                </button>
+              </div>
+              
+              <div className="space-y-6 text-right font-bold text-[#1A1A1A]">
+                <section className="bg-red-50 p-4 rounded-2xl border-2 border-red-200">
+                  <h3 className="text-xl font-black text-red-600 mb-2">1. تكوين الفرق</h3>
+                  <p>ينقسم اللاعبون إلى فريقين: <span className="text-red-600">الأحمر</span> و <span className="text-green-600">الأخضر</span>. المضيف يقوم بتوزيع اللاعبين واختيار بنك الأسئلة.</p>
+                </section>
+
+                <section className="bg-blue-50 p-4 rounded-2xl border-2 border-blue-200">
+                  <h3 className="text-xl font-black text-blue-600 mb-2">2. اختيار الحروف</h3>
+                  <p>تتكون اللوحة من 25 حرفاً. يختار الفريق حرفاً، ويظهر سؤال تبدأ إجابته بهذا الحرف. إذا أجاب الفريق بشكل صحيح، يصبغ الحرف بلونه.</p>
+                </section>
+
+                <section className="bg-green-50 p-4 rounded-2xl border-2 border-green-200">
+                  <h3 className="text-xl font-black text-green-600 mb-2">3. طريق الفوز 🏆</h3>
+                  <p>الهدف هو تكوين طريق متصل من الحروف بلون فريقك:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li><span className="text-red-600">الفريق الأحمر:</span> يجب أن يصل بين اليمين واليسار.</li>
+                    <li><span className="text-green-600">الفريق الأخضر:</span> يجب أن يصل بين الأعلى والأسفل.</li>
+                  </ul>
+                </section>
+
+                <section className="bg-yellow-50 p-4 rounded-2xl border-2 border-yellow-200">
+                  <h3 className="text-xl font-black text-yellow-600 mb-2">4. الجولات</h3>
+                  <p>من يحقق الطريق المتصل أولاً يفوز بالجولة. يمكنك ضبط عدد الجولات المطلوبة للفوز بالمباراة كاملة من الإعدادات.</p>
+                </section>
+              </div>
+
+              <button 
+                onClick={() => setShowTutorial(false)}
+                className="w-full bg-[#1A1A1A] text-white py-4 rounded-2xl font-black text-xl shadow-[4px_4px_0_#444] hover:scale-105 transition-transform mt-4"
+              >
+                فهمت، لنبدأ! 🚀
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+
         {isEditorOpen && (
           <motion.div 
             initial={{ opacity: 0 }}
@@ -2935,31 +3213,57 @@ export default function App() {
               className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-6 lg:p-10 shadow-[12px_12px_0_#1A1A1A] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
             >
               <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-3xl font-black">تعديل الأسئلة يدوياً</h2>
-                  {user && (
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-xl lg:text-3xl font-black">تعديل بنك الأسئلة</h2>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text"
+                      value={editorBankName}
+                      onChange={(e) => setEditorBankName(e.target.value)}
+                      placeholder="اسم البنك..."
+                      className="border-2 border-[#1A1A1A] rounded-lg px-3 py-1 text-sm font-bold outline-none focus:ring-2 ring-blue-500"
+                    />
                     <button 
                       onClick={async () => {
-                        try {
-                          await fetch('/api/banks/save', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId: user.id, name: selectedBankName, data: questions })
-                          });
-                          alert("تم الحفظ في السحابة بنجاح! ✨");
-                          playSound(SOUNDS.SUCCESS);
-                        } catch (err) {
-                          alert("فشل الحفظ في السحابة");
+                        if (!editorBankName.trim()) return alert("يرجى إدخال اسم للبنك");
+                        
+                        // Update local banks
+                        const updatedBanks = { ...banks, [editorBankName]: questions };
+                        if (editorBankName !== selectedBankName && selectedBankName !== "الأسئلة الافتراضية") {
+                          delete updatedBanks[selectedBankName];
                         }
+                        setBanks(updatedBanks);
+                        setSelectedBankName(editorBankName);
+
+                        // Save to cloud if logged in
+                        if (user) {
+                          try {
+                            await fetch('/api/banks/save', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: user.id, name: editorBankName, data: questions })
+                            });
+                            // If renamed, delete old one from cloud
+                            if (editorBankName !== selectedBankName && selectedBankName !== "الأسئلة الافتراضية") {
+                              await fetch(`/api/banks/${user.id}/${selectedBankName}`, { method: 'DELETE' });
+                            }
+                            alert("تم الحفظ بنجاح! ✨");
+                          } catch (err) {
+                            alert("تم الحفظ محلياً، وفشل الحفظ في السحابة");
+                          }
+                        } else {
+                          alert("تم الحفظ محلياً! (سجل دخولك للحفظ في السحابة)");
+                        }
+                        playSound(SOUNDS.SUCCESS);
                       }}
-                      className="bg-blue-500 text-white px-4 py-1 rounded-full text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 transition-transform flex items-center gap-1"
+                      className="bg-green-500 text-white px-4 py-1 rounded-lg text-sm font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 transition-transform flex items-center gap-1"
                     >
-                      <FileUp size={14} /> حفظ في السحابة
+                      <FileUp size={14} /> حفظ التغييرات
                     </button>
-                  )}
+                  </div>
                 </div>
                 <button onClick={() => setIsEditorOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors">
-                  <LogOut size={32} />
+                  <X size={32} />
                 </button>
               </div>
 
