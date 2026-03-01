@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
   Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX,
-  X, Settings, Copy, HelpCircle
+  X, Settings, Copy, HelpCircle, Share2, Upload, Save, Download
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import confetti from 'canvas-confetti';
@@ -2221,7 +2221,7 @@ const TILE_COLORS = {
   green: { fill: '#22C55E', stroke: '#166534', text: '#FFFFFF' },
 };
 
-const SOUNDS = {
+const DEFAULT_SOUNDS = {
   CLICK: 'https://assets.mixkit.co/sfx/preview/mixkit-pop-click-menu-1130.mp3',
   WIN: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
   TIMER: 'https://assets.mixkit.co/sfx/preview/mixkit-clock-countdown-bleeps-916.mp3',
@@ -2231,9 +2231,13 @@ const SOUNDS = {
   LEAVE: 'https://assets.mixkit.co/sfx/preview/mixkit-negative-answer-740.mp3',
   ERROR: 'https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3',
   SUCCESS: 'https://assets.mixkit.co/sfx/preview/mixkit-success-bell-600.mp3',
-  CORRECT: 'https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-reward-952.mp3',
+  CORRECT_ANSWER: 'https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-reward-952.mp3',
+  RED_CORRECT: 'https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-reward-952.mp3',
+  GREEN_CORRECT: 'https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-reward-952.mp3',
+  RED_WIN: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
+  GREEN_WIN: 'https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3',
   WRONG: 'https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3',
-  NEXT_Q: 'https://assets.mixkit.co/sfx/preview/mixkit-fast-double-click-on-mouse-2751.mp3',
+  NEXT_Q: 'https://assets.mixkit.co/sfx/preview/mixkit-magic-notification-ring-2359.mp3',
   SHOW_A: 'https://assets.mixkit.co/sfx/preview/mixkit-interface-hint-notification-911.mp3',
   UPLOAD: 'https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3',
   SELECT_TILE: 'https://assets.mixkit.co/sfx/preview/mixkit-interface-click-1126.mp3',
@@ -2242,24 +2246,43 @@ const SOUNDS = {
   BG_MUSIC: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
 };
 
+// Use a Proxy to handle sound lookups dynamically
+const SOUNDS = new Proxy({} as any, {
+  get: (_, key: string) => {
+    try {
+      const saved = localStorage.getItem('hroof_custom_sounds');
+      const custom = saved ? JSON.parse(saved) : {};
+      return custom[key] || (DEFAULT_SOUNDS as any)[key];
+    } catch (e) {
+      return (DEFAULT_SOUNDS as any)[key];
+    }
+  }
+});
+
+let sfxAudio: HTMLAudioElement | null = null;
+
 const playSound = (url: string) => {
+  if (!url) return;
   try {
-    const audio = new Audio(url);
-    audio.volume = 1.0; // Max volume
-    const playPromise = audio.play();
+    if (sfxAudio) {
+      sfxAudio.pause();
+      sfxAudio.currentTime = 0;
+    }
+    sfxAudio = new Audio(url);
+    sfxAudio.volume = 1.0;
+    const playPromise = sfxAudio.play();
     
     if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        // Silent catch for auto-play prevention
+      playPromise.catch((error) => {
+        console.warn("Playback failed. This usually happens if the user hasn't interacted with the page yet.", error);
       });
     }
     
-    // Haptic feedback
     if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
       window.navigator.vibrate(10);
     }
   } catch (e) {
-    // Silent catch
+    console.warn("Sound error:", e);
   }
 };
 
@@ -2540,6 +2563,83 @@ export default function App() {
   const [hideQuestionsFromGuest, setHideQuestionsFromGuest] = useState(false);
   const [fontSize, setFontSize] = useState(1);
   const [cellSize, setCellSize] = useState(1);
+  const [isSoundSettingsOpen, setIsSoundSettingsOpen] = useState(false);
+  const [customSounds, setCustomSounds] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('hroof_custom_sounds');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const handleSoundUpload = (key: string, file: File) => {
+    if (file.size > 1024 * 1024) { // 1MB limit for localStorage safety
+      alert("حجم الملف كبير جداً! يرجى اختيار ملف أصغر من 1 ميجابايت.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const dataUrl = e.target?.result as string;
+        let next = { ...customSounds };
+        
+        if (key === 'ROUND_WIN') {
+          next.RED_CORRECT = dataUrl;
+          next.GREEN_CORRECT = dataUrl;
+        } else if (key === 'GAME_WIN') {
+          next.RED_WIN = dataUrl;
+          next.GREEN_WIN = dataUrl;
+        } else {
+          next[key] = dataUrl;
+        }
+
+        setCustomSounds(next);
+        localStorage.setItem('hroof_custom_sounds', JSON.stringify(next));
+        playSound(SOUNDS.SUCCESS);
+      } catch (err) {
+        alert("فشل في حفظ الصوت. قد تكون ذاكرة المتصفح ممتلئة.");
+        console.error(err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const exportSounds = () => {
+    const data = JSON.stringify(customSounds, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hroof_sounds_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    playSound(SOUNDS.SUCCESS);
+  };
+
+  const importSounds = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target?.result as string);
+        setCustomSounds(imported);
+        localStorage.setItem('hroof_custom_sounds', JSON.stringify(imported));
+        alert("تم استيراد الأصوات بنجاح! 🎉");
+        playSound(SOUNDS.SUCCESS);
+      } catch (err) {
+        alert("فشل في استيراد الملف. تأكد من أنه ملف JSON صحيح.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const copySoundsAsCode = () => {
+    const code = `const CUSTOM_SOUNDS = ${JSON.stringify(customSounds, null, 2)};\n\n// انسخ هذا الكود وأرسله للمبرمج لتثبيت الأصوات بشكل دائم.`;
+    navigator.clipboard.writeText(code);
+    alert("تم نسخ الكود بنجاح! أرسله للمبرمج لتثبيت الأصوات في اللعبة. 📋");
+    playSound(SOUNDS.CLICK);
+  };
 
   useEffect(() => {
     const calculateCellSize = () => {
@@ -2598,6 +2698,17 @@ export default function App() {
     audio.volume = 0.1;
     return audio;
   });
+
+  useEffect(() => {
+    // Background music source update
+    if (bgMusicAudio) {
+      const currentSrc = SOUNDS.BG_MUSIC;
+      if (bgMusicAudio.src !== currentSrc) {
+        bgMusicAudio.src = currentSrc;
+        if (bgMusicEnabled) bgMusicAudio.play().catch(() => {});
+      }
+    }
+  }, [customSounds, bgMusicEnabled, bgMusicAudio]);
   
   // Banks Management
   const [banks, setBanks] = useState<Record<string, Record<string, { q: string; a: string }[]>>>(() => {
@@ -3016,24 +3127,6 @@ export default function App() {
     if (!showPlayerSelector || !isHost) return;
     
     const { idx, team } = showPlayerSelector;
-    playSound(SOUNDS.CORRECT);
-    playSound(SOUNDS.MARK);
-    
-    // Trigger particle effects matching team color
-    if (team === 'red' || team === 'green') {
-      const color = team === 'red' ? '#EF4444' : '#22C55E';
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: [color, '#FFFFFF', color],
-        ticks: 200,
-        gravity: 1.2,
-        scalar: 1.2,
-        drift: 0,
-      });
-    }
-    
     const newTiles = [...tiles];
     newTiles[idx] = team;
     
@@ -3049,55 +3142,77 @@ export default function App() {
     setLastAnswerer(playerName);
     setMatchLog(newLog);
     setShowPlayerSelector(null);
-    
-    const checkTeamWin = (t: 'red' | 'green') => {
-      if (checkWin(newTiles, t)) {
-        setWinner(t);
-        const newScores = { ...scores, [t]: scores[t] + 1 };
-        setScores(newScores);
+
+    // Determine the most important sound to play
+    let soundToPlay = team === 'red' ? SOUNDS.RED_CORRECT : SOUNDS.GREEN_CORRECT;
+    let isGameWin = false;
+    let isRoundWin = false;
+
+    if (checkWin(newTiles, team)) {
+      isRoundWin = true;
+      setWinner(team);
+      const newScores = { ...scores, [team]: scores[team] + 1 };
+      setScores(newScores);
+      
+      const winLogEntry = { 
+        text: `🏆 الفريق ${team === 'red' ? 'الأحمر' : 'الأخضر'} فاز بالجولة!`, 
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) 
+      };
+      const winLog = [winLogEntry, ...newLog].slice(0, 10);
+      setMatchLog(winLog);
+
+      if (newScores[team] >= winCondition) {
+        isGameWin = true;
+        setGameWinner(team);
+        soundToPlay = team === 'red' ? SOUNDS.RED_WIN : SOUNDS.GREEN_WIN;
         
-        const winLogEntry = { 
-          text: `🏆 الفريق ${t === 'red' ? 'الأحمر' : 'الأخضر'} فاز بالجولة!`, 
-          time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) 
-        };
-        const winLog = [winLogEntry, ...newLog].slice(0, 10);
-        setMatchLog(winLog);
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: team === 'red' ? ['#EF4444', '#ffffff'] : ['#22C55E', '#ffffff']
+        });
 
-        if (newScores[t] >= winCondition) {
-          setGameWinner(t);
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: t === 'red' ? ['#EF4444', '#ffffff'] : ['#22C55E', '#ffffff']
-          });
-          broadcastState({ 
-            winner: t, 
-            scores: newScores, 
-            gameWinner: t, 
-            tiles: newTiles, 
-            playerStats: newStats, 
-            lastAnswerer: playerName,
-            matchLog: winLog
-          });
-        } else {
-          broadcastState({ 
-            winner: t, 
-            scores: newScores, 
-            tiles: newTiles, 
-            playerStats: newStats, 
-            lastAnswerer: playerName,
-            matchLog: winLog
-          });
-        }
-        playSound(SOUNDS.WIN);
-        return true;
+        broadcastState({ 
+          winner: team, 
+          scores: newScores, 
+          gameWinner: team, 
+          tiles: newTiles, 
+          playerStats: newStats, 
+          lastAnswerer: playerName,
+          matchLog: winLog
+        });
+      } else {
+        soundToPlay = SOUNDS.WIN;
+        broadcastState({ 
+          winner: team, 
+          scores: newScores, 
+          tiles: newTiles, 
+          playerStats: newStats, 
+          lastAnswerer: playerName, 
+          matchLog: winLog
+        });
       }
-      return false;
-    };
-
-    if (!checkTeamWin(team)) {
+    } else {
       broadcastState({ tiles: newTiles, playerStats: newStats, lastAnswerer: playerName, matchLog: newLog });
+    }
+
+    // Play the determined sound
+    playSound(soundToPlay);
+
+    // Trigger particle effects matching team color (only if not a game win, as game win has its own confetti)
+    if (!isGameWin && (team === 'red' || team === 'green')) {
+      const color = team === 'red' ? '#EF4444' : '#22C55E';
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: [color, '#FFFFFF', color],
+        ticks: 200,
+        gravity: 1.2,
+        scalar: 1.2,
+        drift: 0,
+      });
     }
   };
 
@@ -3210,6 +3325,7 @@ export default function App() {
 
   const addPlayer = (team: 'red' | 'green', name: string) => {
     if (!name.trim()) return;
+    playSound(SOUNDS.CLICK);
     setTeams(prev => ({
       ...prev,
       [team]: [...prev[team], name.trim()]
@@ -3217,6 +3333,7 @@ export default function App() {
   };
 
   const removePlayer = (team: 'red' | 'green', index: number) => {
+    playSound(SOUNDS.CLICK);
     setTeams(prev => ({
       ...prev,
       [team]: prev[team].filter((_, i) => i !== index)
@@ -3328,7 +3445,7 @@ export default function App() {
               </div>
             ) : (
               <button 
-                onClick={() => setIsAuthOpen(true)}
+                onClick={() => { playSound(SOUNDS.CLICK); setIsAuthOpen(true); }}
                 className="bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl px-3 lg:px-6 py-1 lg:py-2 font-black shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-all flex items-center gap-1 lg:gap-2 text-[10px] lg:text-base"
               >
                 <LogIn size={14} />
@@ -3375,6 +3492,7 @@ export default function App() {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
+                              playSound(SOUNDS.CLICK);
                               setBankToDelete(name);
                             }}
                             className="absolute -left-1 -top-1 w-4 h-4 lg:w-6 lg:h-6 bg-red-500 text-white rounded-full border-2 border-[#1A1A1A] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -3503,7 +3621,7 @@ export default function App() {
                       {Object.keys(THEMES).map((t) => (
                         <button
                           key={t}
-                          onClick={() => { setTheme(t as any); broadcastState({ theme: t }); }}
+                          onClick={() => { playSound(SOUNDS.CLICK); setTheme(t as any); broadcastState({ theme: t }); }}
                           className={`py-1 lg:py-2 border-2 lg:border-4 border-[#1A1A1A] rounded-lg lg:rounded-xl font-black text-[7px] lg:text-xs capitalize transition-all ${theme === t ? 'bg-yellow-400' : 'bg-white'}`}
                         >
                           {t === 'classic' ? 'كلاسيكي' : t === 'night' ? 'ليلي' : t === 'wooden' ? 'خشبي' : 'ملكي'}
@@ -3589,7 +3707,7 @@ export default function App() {
 
             <div className="flex gap-2 lg:gap-4 mt-1 lg:mt-4">
               <button 
-                onClick={startGame}
+                onClick={() => { playSound(SOUNDS.CLICK); startGame(); }}
                 className="flex-[2] bg-[#22C55E] text-white border-4 lg:border-8 border-[#1A1A1A] rounded-xl lg:rounded-3xl py-2 lg:py-4 text-sm lg:text-2xl font-black shadow-[4px_4px_0_#166534] lg:shadow-[8px_8px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform"
               >
                 ابدأ اللعبة 🎮
@@ -3618,13 +3736,13 @@ export default function App() {
             <div className="flex flex-col gap-4 lg:gap-6">
               <div className="flex border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl overflow-hidden">
                 <button 
-                  onClick={() => setAuthMode('login')}
+                  onClick={() => { playSound(SOUNDS.CLICK); setAuthMode('login'); }}
                   className={`flex-1 py-2 lg:py-4 font-black text-sm lg:text-xl transition-all ${authMode === 'login' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A]'}`}
                 >
                   دخول
                 </button>
                 <button 
-                  onClick={() => setAuthMode('signup')}
+                  onClick={() => { playSound(SOUNDS.CLICK); setAuthMode('signup'); }}
                   className={`flex-1 py-2 lg:py-4 font-black text-sm lg:text-xl transition-all ${authMode === 'signup' ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A]'}`}
                 >
                   تسجيل
@@ -3656,7 +3774,7 @@ export default function App() {
               </div>
 
               <button 
-                onClick={handleAuth}
+                onClick={() => { playSound(SOUNDS.CLICK); handleAuth(); }}
                 className="bg-[#22C55E] text-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-3 lg:py-5 text-lg lg:text-2xl font-black shadow-[2px_2px_0_#166534] lg:shadow-[4px_4px_0_#166534] mt-2 lg:mt-4 hover:scale-105 active:scale-95 transition-transform"
               >
                 {authMode === 'login' ? 'دخول 🔓' : 'إنشاء حساب ✨'}
@@ -3711,6 +3829,17 @@ export default function App() {
                   className="bg-[#3B82F6] text-white border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#1E40AF] lg:shadow-[4px_4px_0_#1E40AF] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
                 >
                   <LogIn size={18} /> انضمام للغرفة
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    playSound(SOUNDS.CLICK);
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('تم نسخ رابط اللعبة! أرسله لأصدقائك 🚀');
+                  }} 
+                  className="bg-[#A855F7] text-white border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
+                >
+                  <Share2 size={18} /> مشاركة الرابط
                 </button>
               </div>
             </div>
@@ -3849,7 +3978,7 @@ export default function App() {
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => { 
-                                  playSound(SOUNDS.QUESTION_APPEAR); 
+                                  playSound(SOUNDS.NEXT_Q); 
                                   const nextIdx = getRandomQuestionIdx(currentLetter);
                                   setQIdx(nextIdx); 
                                   setShowAnswer(false); 
@@ -4019,15 +4148,15 @@ export default function App() {
                 <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
                   <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">حجم الخط</span>
                   <div className="flex gap-2">
-                    <button onClick={() => setFontSize(f => Math.max(0.5, f - 0.1))} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
-                    <button onClick={() => setFontSize(f => Math.min(2, f + 0.1))} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
+                    <button onClick={() => { playSound(SOUNDS.CLICK); setFontSize(f => Math.max(0.5, f - 0.1)); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
+                    <button onClick={() => { playSound(SOUNDS.CLICK); setFontSize(f => Math.min(2, f + 0.1)); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
                   <span className="text-[clamp(0.5rem,1.2vw,0.65rem)] font-bold">حجم الخلية</span>
                   <div className="flex gap-2">
-                    <button onClick={() => { const next = Math.max(0.5, cellSize - 0.1); setCellSize(next); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
-                    <button onClick={() => { const next = Math.min(2, cellSize + 0.1); setCellSize(next); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
+                    <button onClick={() => { playSound(SOUNDS.CLICK); const next = Math.max(0.5, cellSize - 0.1); setCellSize(next); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">-</button>
+                    <button onClick={() => { playSound(SOUNDS.CLICK); const next = Math.min(2, cellSize + 0.1); setCellSize(next); }} className="w-8 h-8 bg-white border-2 border-[#1A1A1A] rounded-lg font-bold">+</button>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-2 bg-gray-50 border-2 border-[#1A1A1A] rounded-xl">
@@ -4067,14 +4196,31 @@ export default function App() {
             </motion.div>
 
             <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="flex flex-col gap-2 lg:gap-4">
-              <button onClick={resetGame} className="w-full bg-[#EF4444] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><RotateCcw size={16} /> لعبة جديدة</button>
+              <button onClick={() => { playSound(SOUNDS.CLICK); resetGame(); }} className="w-full bg-[#EF4444] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-black shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><RotateCcw size={16} /> لعبة جديدة</button>
               <button 
                 onClick={() => { playSound(SOUNDS.CLICK); setIsEditorOpen(true); }} 
                 className="w-full bg-[#3B82F6] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"
               >
                 <Plus size={16} /> تعديل الأسئلة يدوياً
               </button>
+              <button 
+                onClick={() => { playSound(SOUNDS.CLICK); setIsSoundSettingsOpen(true); }} 
+                className="w-full bg-[#FBBF24] text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"
+              >
+                <Volume2 size={16} /> تخصيص الأصوات 🔊
+              </button>
               <button onClick={() => { playSound(SOUNDS.CLICK); setScreen('bank-selection'); }} className="w-full bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><Users size={16} /> اختيار بنك آخر</button>
+              
+              <button 
+                onClick={() => {
+                  playSound(SOUNDS.CLICK);
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('تم نسخ رابط اللعبة! أرسله لأصدقائك 🚀');
+                }} 
+                className="w-full bg-[#A855F7] text-white border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"
+              >
+                <Share2 size={16} /> مشاركة اللعبة مع الأصدقاء
+              </button>
               <button 
                 onClick={() => { 
                   if(confirm('هل تريد العودة للأسئلة الافتراضية؟')) {
@@ -4264,6 +4410,13 @@ export default function App() {
                       <button onClick={() => { playSound(SOUNDS.CLICK); setFontSize(f => Math.min(2, f + 0.1)); }} className="w-10 h-10 bg-gray-100 border-2 border-[#1A1A1A] rounded-xl font-black">+</button>
                     </div>
                   </div>
+
+                  <button 
+                    onClick={() => { playSound(SOUNDS.CLICK); setIsSoundSettingsOpen(true); }} 
+                    className="w-full bg-[#FBBF24] text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-4 font-black shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
+                  >
+                    <Volume2 size={20} /> تخصيص الأصوات 🔊
+                  </button>
 
                   {selectedIdx !== -1 && !hideQuestionsFromGuest && (
                     <motion.div 
@@ -4894,6 +5047,151 @@ export default function App() {
                   )}
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Sound Settings Modal */}
+      <AnimatePresence>
+        {isSoundSettingsOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[16px_16px_0_#1A1A1A] relative"
+            >
+              <button 
+                onClick={() => setIsSoundSettingsOpen(false)}
+                className="absolute top-6 left-6 p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={32} />
+              </button>
+
+              <div className="text-center mb-8">
+                <h2 className="text-4xl font-black mb-2">تخصيص الأصوات 🔊</h2>
+                <p className="text-gray-500 font-bold">ارفع ملفات MP3 الخاصة بك لتغيير أصوات اللعبة</p>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-wrap gap-2 justify-center mb-2">
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem('hroof_custom_sounds', JSON.stringify(customSounds));
+                      alert("تم حفظ جميع التغييرات في المتصفح بنجاح! ✅");
+                      playSound(SOUNDS.SUCCESS);
+                    }}
+                    className="bg-[#22C55E] text-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+                  >
+                    <Save size={14} /> حفظ التغييرات
+                  </button>
+                  <button 
+                    onClick={copySoundsAsCode}
+                    className="bg-[#3B82F6] text-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+                  >
+                    <Copy size={14} /> نسخ الكود للمبرمج
+                  </button>
+                  <button 
+                    onClick={exportSounds}
+                    className="bg-white text-[#1A1A1A] border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+                  >
+                    <Download size={14} /> تصدير الملف
+                  </button>
+                  <label className="bg-white text-[#1A1A1A] border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform flex items-center gap-2 cursor-pointer">
+                    <Upload size={14} /> استيراد ملف
+                    <input type="file" accept=".json" className="hidden" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) importSounds(file);
+                    }} />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { key: 'CLICK', label: 'صوت الضغطة 🖱️' },
+                  { key: 'CORRECT_ANSWER', label: 'صوت الإجابة الصحيحة 🎯' },
+                  { key: 'ROUND_WIN', label: 'صوت الفوز بالجولة ✅' },
+                  { key: 'GAME_WIN', label: 'صوت الفوز باللعبة 🏆' },
+                  { key: 'LEAVE', label: 'صوت الخروج 🚪' },
+                  { key: 'NEXT_Q', label: 'صوت تغيير السؤال 🔄' },
+                ].map((item) => (
+                  <div key={item.key} className="bg-gray-50 border-4 border-[#1A1A1A] rounded-2xl p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-sm">{item.label}</span>
+                      <button 
+                        onClick={() => {
+                          if (item.key === 'ROUND_WIN') playSound(SOUNDS.RED_CORRECT);
+                          else if (item.key === 'GAME_WIN') playSound(SOUNDS.RED_WIN);
+                          else playSound(SOUNDS[item.key as keyof typeof SOUNDS]);
+                        }}
+                        className="p-2 bg-white border-2 border-[#1A1A1A] rounded-lg hover:scale-110 transition-transform"
+                      >
+                        <Volume2 size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <label className="flex-1 bg-[#3B82F6] text-white border-2 border-[#1A1A1A] rounded-lg py-2 px-3 text-xs font-black cursor-pointer hover:bg-[#2563EB] transition-colors flex items-center justify-center gap-2">
+                        <Upload size={14} />
+                        رفع ملف
+                        <input 
+                          type="file" 
+                          accept="audio/*" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleSoundUpload(item.key, file);
+                          }}
+                        />
+                      </label>
+                      {(item.key === 'ROUND_WIN' ? customSounds.RED_CORRECT : 
+                        item.key === 'GAME_WIN' ? customSounds.RED_WIN : 
+                        customSounds[item.key]) && (
+                        <button 
+                          onClick={() => {
+                            const next = { ...customSounds };
+                            if (item.key === 'ROUND_WIN') {
+                              delete next.RED_CORRECT;
+                              delete next.GREEN_CORRECT;
+                            } else if (item.key === 'GAME_WIN') {
+                              delete next.RED_WIN;
+                              delete next.GREEN_WIN;
+                            } else {
+                              delete next[item.key];
+                            }
+                            setCustomSounds(next);
+                            try {
+                              localStorage.setItem('hroof_custom_sounds', JSON.stringify(next));
+                            } catch (e) {}
+                          }}
+                          className="p-2 bg-red-100 text-red-500 border-2 border-red-500 rounded-lg hover:bg-red-200 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button 
+              onClick={() => {
+                if (confirm('هل تريد استعادة جميع الأصوات الأصلية؟')) {
+                  setCustomSounds({});
+                  localStorage.removeItem('hroof_custom_sounds');
+                  setIsSoundSettingsOpen(false);
+                }
+              }}
+              className="w-full mt-8 bg-gray-100 text-gray-500 border-4 border-[#1A1A1A] rounded-2xl py-4 font-black hover:bg-gray-200 transition-colors"
+            >
+              استعادة الأصوات الافتراضية ↺
+            </button>
             </motion.div>
           </motion.div>
         )}
