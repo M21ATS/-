@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
   Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX,
-  X, Settings, Copy, HelpCircle, Share2, Upload, Save, Download
+  X, Settings, Copy, HelpCircle, Share2, Upload, Save, Download, Maximize2
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import confetti from 'canvas-confetti';
@@ -2536,10 +2536,137 @@ const Confetti = () => {
    MAIN APP
 ───────────────────────────────────────────────────────── */
 
+/* ─────────────────────────────────────────────────────────
+   HAMOODI MOOD SYSTEM
+───────────────────────────────────────────────────────── */
+type HamoodiMood = 'happy' | 'neutral' | 'sleepy' | 'excited' | 'sad';
+
+const HAMOODI_MESSAGES = {
+  RED_SCORE: (name: string) => `أحسنت يا ${name}! نقطة رائعة تضاف لرصيد الفريق الأحمر.`,
+  GREEN_SCORE: (name: string) => `إبداع من ${name}! الفريق الأخضر يقترب من السيطرة.`,
+  RED_STREAK_2: "الفريق الأحمر في حالة تأهب! إجابتان متتاليتان، هل من منافس؟",
+  RED_STREAK_3: "يا للهول، الأحمر لا يتوقف! ثلاثة أهداف متتالية، أنتم مذهلون.",
+  GREEN_STREAK_2: "الأخضر يتقدم بثبات! إجابتان متتاليتان تشعلان الحماس.",
+  GREEN_STREAK_3: "إعصار أخضر يجتاح اللعبة! ثلاث إجابات متتالية، أداء أسطوري.",
+  START: "هيا بنا نبدأ التحدي! أنا متحمس لرؤية من سيفوز.",
+  LETTER_A: "حرف الألف، بداية الجمال! من سيفوز بهذا الحرف القوي؟",
+  LETTER_Y: "وصلنا لآخر الحروف، الياء! هل ستكون مسك الختام؟",
+  LETTER_Z: "حرف الزاي، سريع ورشيق! أروني شطارتكم في الإجابة.",
+  LETTER_M: "حرف الميم للمبدعين! من سيخطف هذه النقطة الثمينة؟",
+  LETTER_S: "حرف السين للسرعة! فكروا جيداً وبسرعة قبل الإجابة.",
+  LETTER_G: "حرف الجيم، حرف الجمال! من سيجمل لوحته بهذه النقطة؟",
+  LETTER_H: "حرف الحاء، حماس لا ينتهي! أروني قوتكم في هذا الحرف.",
+  LETTER_R: "حرف الراء، روعة في الأداء! من سيبهرنا بإجابته الآن؟",
+  LETTER_B: "حرف الباء، بداية قوية! ركزوا جيداً في السؤال القادم.",
+  LETTER_T: "حرف التاء، تحدي جديد! من سيثبت جدارته في هذا الحرف؟",
+  RED_NEAR_WIN: "الأحمر على بعد خطوة! هل سيحسمونها في هذه اللحظة؟",
+  GREEN_NEAR_WIN: "الأخضر يقترب من النهاية! الحماس وصل لأقصى درجاته.",
+  TIE: "التعادل سيد الموقف! كل نقطة قادمة ستكون حاسمة جداً.",
+  FIRST_POINT: "أول نقطة، يا لها من بداية! الفريق سجل حضوره بقوة.",
+  IDLE: "أين أنتم يا أصدقاء؟ أنا أنتظر إجاباتكم بفارغ الصبر.",
+  RAPID: "يا للسرعة، كالمطر! أنتم أسرع من البرق اليوم.",
+  THEME: "أحب هذا المظهر الجديد! التغيير يعطي طاقة إيجابية.",
+  WIN_COND: "تغيير في القوانين، إثارة! استعدوا للتحدي الجديد.",
+  ROUND_RED: "مبروك للأحمر هذه الجولة! استعدوا للقادم بحماس.",
+  ROUND_GREEN: "تحية للأخضر على الفوز! الجولة كانت مليئة بالتحدي.",
+  GAME_WIN: "انتهت المعركة بفوز مستحق! مبروك للبطل وحظاً أوفر.",
+  LETTER_F: "حرف الفاء، فوز وفرح! من سيحقق الفوز بهذا الحرف؟",
+  LETTER_K: "حرف الكاف، كفاح ونجاح! أروني قوتكم في الإجابة.",
+  LETTER_L: "حرف اللام، لمعان وجمال! حرف مميز لمن يستحقه.",
+};
+
+const Hamoodi = ({ mood, name, message }: { mood: HamoodiMood, name: string, message?: string | null }) => {
+  const getHamoodiContent = () => {
+    switch (mood) {
+      case 'happy':
+        return {
+          emoji: '😊',
+          message: `أهلاً بك يا ${name}! أنا سعيد جداً اليوم!`,
+          color: 'bg-green-100',
+          borderColor: 'border-green-500'
+        };
+      case 'excited':
+        return {
+          emoji: '🤩',
+          message: `يا للروعة يا ${name}! أنت تبلي بلاءً حسناً!`,
+          color: 'bg-yellow-100',
+          borderColor: 'border-yellow-500'
+        };
+      case 'sleepy':
+        return {
+          emoji: '😴',
+          message: `يا إلهي يا ${name}... أشعر بالنعاس قليلاً...`,
+          color: 'bg-blue-100',
+          borderColor: 'border-blue-500'
+        };
+      case 'sad':
+        return {
+          emoji: '😢',
+          message: `أوه لا يا ${name}... حظاً أوفر في المرة القادمة!`,
+          color: 'bg-red-100',
+          borderColor: 'border-red-500'
+        };
+      default:
+        return {
+          emoji: '😐',
+          message: `كيف حالك يا ${name}؟ لنبدأ اللعب!`,
+          color: 'bg-gray-100',
+          borderColor: 'border-gray-500'
+        };
+    }
+  };
+
+  const content = getHamoodiContent();
+  const displayMessage = message || content.message;
+
+  return (
+    <motion.div 
+      layout
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className={`flex items-center gap-3 p-3 rounded-2xl border-4 ${content.borderColor} ${content.color} shadow-[4px_4px_0_#1A1A1A] max-w-[250px] pointer-events-auto`}
+    >
+      <motion.span 
+        animate={mood === 'excited' ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
+        transition={{ repeat: Infinity, duration: 1 }}
+        className="text-3xl"
+      >
+        {content.emoji}
+      </motion.span>
+      <div className="flex flex-col">
+        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Hamoodi</span>
+        <p className="text-[10px] lg:text-xs font-bold text-[#1A1A1A] leading-tight">{displayMessage}</p>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function App() {
   const [screen, setScreen] = useState<'auth' | 'lobby' | 'bank-selection' | 'game'>('auth');
   const [playerName, setPlayerName] = useState('');
+  const [hamoodiMood, setHamoodiMood] = useState<HamoodiMood>('neutral');
+  const [isSmartHost, setIsSmartHost] = useState(false);
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const updateHamoodiMood = (mood: HamoodiMood) => {
+    setHamoodiMood(mood);
+    if (isHost || isSmartHost) broadcastState({ hamoodiMood: mood });
+  };
+  const [hamoodiMessage, setHamoodiMessage] = useState<string | null>(null);
+  const [streak, setStreak] = useState<{ team: 'red' | 'green' | null, count: number }>({ team: null, count: 0 });
   const [roomCode, setRoomCode] = useState('');
+
+  const triggerHamoodiMessage = (msg: string | null) => {
+    setHamoodiMessage(msg);
+    if (isHost || isSmartHost) broadcastState({ hamoodiMessage: msg });
+    
+    if (msg) {
+      // Reset message after 6 seconds
+      setTimeout(() => {
+        setHamoodiMessage(null);
+        if (isHost || isSmartHost) broadcastState({ hamoodiMessage: null });
+      }, 6000);
+    }
+  };
   const [isHost, setIsHost] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [playerList, setPlayerList] = useState<{ id: string; name: string }[]>([]);
@@ -2557,6 +2684,7 @@ export default function App() {
   const [teamNames, setTeamNames] = useState({ red: 'الفريق الأحمر', green: 'الفريق الأخضر' });
   const [playerStats, setPlayerStats] = useState<Record<string, number>>({});
   const [lastAnswerer, setLastAnswerer] = useState<string | null>(null);
+  const [isLetterExpanded, setIsLetterExpanded] = useState(false);
   const [theme, setTheme] = useState<'classic' | 'night' | 'wooden' | 'royal'>('classic');
   const [matchLog, setMatchLog] = useState<{ text: string, time: string }[]>([]);
   const [showPlayerSelector, setShowPlayerSelector] = useState<{ idx: number, team: 'red' | 'green' } | null>(null);
@@ -2962,6 +3090,10 @@ export default function App() {
       if (state.theme) setTheme(state.theme);
       if (state.matchLog) setMatchLog(state.matchLog);
       if (state.teamNames) setTeamNames(state.teamNames);
+      if (state.isSmartHost !== undefined) setIsSmartHost(state.isSmartHost);
+      if (state.showPlayerSelector !== undefined) setShowPlayerSelector(state.showPlayerSelector);
+      if (state.hamoodiMessage !== undefined) setHamoodiMessage(state.hamoodiMessage);
+      if (state.hamoodiMood) setHamoodiMood(state.hamoodiMood);
     });
 
     newSocket.on("player-list", (players) => {
@@ -3015,25 +3147,29 @@ export default function App() {
 
   const getRandomQuestionIdx = useCallback((letter: string) => {
     const categoryQuestions = questions[letter] || [];
-    if (categoryQuestions.length === 0) return -1;
+    if (categoryQuestions.length === 0) return { idx: -1, nextUsed: usedQuestions };
     
     const usedIndices = usedQuestions[letter] || [];
     const availableIndices = categoryQuestions.map((_, i) => i).filter(i => !usedIndices.includes(i));
     
+    let newIdx: number;
+    let nextUsed: Record<string, number[]>;
+
     if (availableIndices.length === 0) {
       // All questions used, reset for this letter
-      const newIdx = Math.floor(Math.random() * categoryQuestions.length);
-      setUsedQuestions(prev => ({ ...prev, [letter]: [newIdx] }));
-      return newIdx;
+      newIdx = Math.floor(Math.random() * categoryQuestions.length);
+      nextUsed = { ...usedQuestions, [letter]: [newIdx] };
+    } else {
+      newIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+      nextUsed = { ...usedQuestions, [letter]: [...usedIndices, newIdx] };
     }
     
-    const randomAvailableIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-    setUsedQuestions(prev => ({ ...prev, [letter]: [...usedIndices, randomAvailableIdx] }));
-    return randomAvailableIdx;
+    setUsedQuestions(nextUsed);
+    return { idx: newIdx, nextUsed };
   }, [questions, usedQuestions]);
 
   const handleTileClick = (idx: number) => {
-    if (!isHost) return;
+    if (!isHost && !isSmartHost) return;
     const isDeselecting = idx === selectedIdx;
     const nextIdx = isDeselecting ? -1 : idx;
     setSelectedIdx(nextIdx);
@@ -3046,9 +3182,12 @@ export default function App() {
     }
     
     let nextQIdx = 0;
+    let nextUsed = usedQuestions;
     if (nextIdx !== -1) {
       const letter = letters[nextIdx];
-      nextQIdx = getRandomQuestionIdx(letter);
+      const result = getRandomQuestionIdx(letter);
+      nextQIdx = result.idx;
+      nextUsed = result.nextUsed;
       // Play question appear sound
       setTimeout(() => playSound(SOUNDS.QUESTION_APPEAR), 100);
     }
@@ -3059,7 +3198,7 @@ export default function App() {
       selectedIdx: nextIdx, 
       qIdx: nextQIdx, 
       showAnswer: false,
-      usedQuestions: usedQuestions // Sync used questions
+      usedQuestions: nextUsed // Sync updated used questions
     });
     
     // Auto-select letter in editor if host opens it
@@ -3106,11 +3245,30 @@ export default function App() {
     };
   }, [resize, stopResizing]);
 
+  useEffect(() => {
+    if (screen !== 'game') return;
+    
+    const idleTimer = setTimeout(() => {
+      updateHamoodiMood('sleepy');
+      triggerHamoodiMessage(HAMOODI_MESSAGES.IDLE);
+    }, 45000); 
+
+    return () => clearTimeout(idleTimer);
+  }, [screen, lastAnswerer, selectedIdx]);
+
+  useEffect(() => {
+    if (hamoodiMood !== 'neutral' && hamoodiMood !== 'sleepy') {
+      const resetTimer = setTimeout(() => updateHamoodiMood('neutral'), 8000);
+      return () => clearTimeout(resetTimer);
+    }
+  }, [hamoodiMood]);
+
   const markTile = (state: string) => {
-    if (selectedIdx === -1 || !isHost || gameWinner) return;
+    if (selectedIdx === -1 || (!isHost && !isSmartHost) || gameWinner) return;
     
     if (state === 'neutral') {
       playSound(SOUNDS.WRONG);
+      updateHamoodiMood('sad');
       const newTiles = [...tiles];
       newTiles[selectedIdx] = state;
       setTiles(newTiles);
@@ -3118,18 +3276,57 @@ export default function App() {
       return;
     }
 
+    // Special letter messages
+    const letter = letters[selectedIdx];
+    if (letter === 'ا') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_A);
+    else if (letter === 'ي') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_Y);
+    else if (letter === 'ز') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_Z);
+    else if (letter === 'م') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_M);
+    else if (letter === 'س') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_S);
+    else if (letter === 'ج') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_G);
+    else if (letter === 'ح') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_H);
+    else if (letter === 'ر') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_R);
+    else if (letter === 'ب') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_B);
+    else if (letter === 'ت') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_T);
+    else if (letter === 'ف') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_F);
+    else if (letter === 'ك') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_K);
+    else if (letter === 'ل') triggerHamoodiMessage(HAMOODI_MESSAGES.LETTER_L);
+
     // Open player selector for scoring
     playSound(SOUNDS.CLICK);
-    setShowPlayerSelector({ idx: selectedIdx, team: state as 'red' | 'green' });
+    const selectorState = { idx: selectedIdx, team: state as 'red' | 'green' };
+    setShowPlayerSelector(selectorState);
+    if (isSmartHost) broadcastState({ showPlayerSelector: selectorState });
   };
 
   const confirmMarkTile = (playerName: string) => {
-    if (!showPlayerSelector || !isHost) return;
+    if (!showPlayerSelector || (!isHost && !isSmartHost)) return;
     
     const { idx, team } = showPlayerSelector;
     const newTiles = [...tiles];
     newTiles[idx] = team;
     
+    updateHamoodiMood('excited');
+    
+    // Streak logic
+    const newStreak = streak.team === team ? { team, count: streak.count + 1 } : { team, count: 1 };
+    setStreak(newStreak);
+
+    if (team === 'red') {
+      if (newStreak.count === 2) triggerHamoodiMessage(HAMOODI_MESSAGES.RED_STREAK_2);
+      else if (newStreak.count >= 3) triggerHamoodiMessage(HAMOODI_MESSAGES.RED_STREAK_3);
+      else triggerHamoodiMessage(HAMOODI_MESSAGES.RED_SCORE(playerName));
+    } else {
+      if (newStreak.count === 2) triggerHamoodiMessage(HAMOODI_MESSAGES.GREEN_STREAK_2);
+      else if (newStreak.count >= 3) triggerHamoodiMessage(HAMOODI_MESSAGES.GREEN_STREAK_3);
+      else triggerHamoodiMessage(HAMOODI_MESSAGES.GREEN_SCORE(playerName));
+    }
+
+    // First point message
+    if (scores.red === 0 && scores.green === 0 && tiles.filter(t => t !== 'neutral').length === 0) {
+      triggerHamoodiMessage(HAMOODI_MESSAGES.FIRST_POINT);
+    }
+
     const newStats = { ...playerStats, [playerName]: (playerStats[playerName] || 0) + 1 };
     const logEntry = { 
       text: `✨ ${playerName} أجاب على حرف (${letters[idx]})`, 
@@ -3142,6 +3339,7 @@ export default function App() {
     setLastAnswerer(playerName);
     setMatchLog(newLog);
     setShowPlayerSelector(null);
+    if (isSmartHost) broadcastState({ showPlayerSelector: null });
 
     // Determine the most important sound to play
     let soundToPlay = team === 'red' ? SOUNDS.RED_CORRECT : SOUNDS.GREEN_CORRECT;
@@ -3154,6 +3352,9 @@ export default function App() {
       const newScores = { ...scores, [team]: scores[team] + 1 };
       setScores(newScores);
       
+      if (team === 'red') triggerHamoodiMessage(HAMOODI_MESSAGES.ROUND_RED);
+      else triggerHamoodiMessage(HAMOODI_MESSAGES.ROUND_GREEN);
+
       const winLogEntry = { 
         text: `🏆 الفريق ${team === 'red' ? 'الأحمر' : 'الأخضر'} فاز بالجولة!`, 
         time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) 
@@ -3165,6 +3366,7 @@ export default function App() {
         isGameWin = true;
         setGameWinner(team);
         soundToPlay = team === 'red' ? SOUNDS.RED_WIN : SOUNDS.GREEN_WIN;
+        triggerHamoodiMessage(HAMOODI_MESSAGES.GAME_WIN);
         
         confetti({
           particleCount: 150,
@@ -3184,6 +3386,15 @@ export default function App() {
         });
       } else {
         soundToPlay = SOUNDS.WIN;
+        
+        // Near win messages
+        if (newScores[team] === winCondition - 1) {
+          if (team === 'red') triggerHamoodiMessage(HAMOODI_MESSAGES.RED_NEAR_WIN);
+          else triggerHamoodiMessage(HAMOODI_MESSAGES.GREEN_NEAR_WIN);
+        } else if (newScores.red === newScores.green) {
+          triggerHamoodiMessage(HAMOODI_MESSAGES.TIE);
+        }
+
         broadcastState({ 
           winner: team, 
           scores: newScores, 
@@ -3217,7 +3428,7 @@ export default function App() {
   };
 
   const nextRound = () => {
-    if (!isHost) return;
+    if (!isHost && !isSmartHost) return;
     playSound(SOUNDS.NEW_GAME);
     const shuffled = shuffleArray(INITIAL_LETTERS);
     const newState = {
@@ -3230,7 +3441,8 @@ export default function App() {
       usedQuestions: {},
       qIdx: 0,
       showAnswer: false,
-      lastAnswerer: null
+      lastAnswerer: null,
+      isSmartHost: isSmartHost
     };
     setTiles(newState.tiles);
     setLetters(newState.letters);
@@ -3246,7 +3458,7 @@ export default function App() {
   };
 
   const resetGame = () => {
-    if (!isHost) return;
+    if (!isHost && !isSmartHost) return;
     playSound(SOUNDS.NEW_GAME);
     const shuffled = shuffleArray(INITIAL_LETTERS);
     const newState = {
@@ -3263,7 +3475,8 @@ export default function App() {
       showAnswer: false,
       playerStats: {},
       lastAnswerer: null,
-      matchLog: []
+      matchLog: [],
+      isSmartHost: isSmartHost
     };
     setTiles(newState.tiles);
     setLetters(newState.letters);
@@ -3284,7 +3497,7 @@ export default function App() {
 
   const createRoom = () => {
     if (!playerName) return alert("يرجى إدخال اسمك أولاً");
-    const code = Math.floor(100 + Math.random() * 900).toString();
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
     setRoomCode(code);
     setIsHost(true);
     socket?.emit("create-room", { roomCode: code, playerName });
@@ -3316,11 +3529,13 @@ export default function App() {
       theme: theme,
       winCondition: winCondition,
       timerDuration: timerDuration,
-      matchLog: []
+      matchLog: [],
+      isSmartHost: isSmartHost
     });
     setScreen('game');
     setMatchLog([]);
     playSound(SOUNDS.NEW_GAME);
+    triggerHamoodiMessage(HAMOODI_MESSAGES.START);
   };
 
   const addPlayer = (team: 'red' | 'green', name: string) => {
@@ -3621,13 +3836,37 @@ export default function App() {
                       {Object.keys(THEMES).map((t) => (
                         <button
                           key={t}
-                          onClick={() => { playSound(SOUNDS.CLICK); setTheme(t as any); broadcastState({ theme: t }); }}
+                          onClick={() => { 
+                            playSound(SOUNDS.CLICK); 
+                            setTheme(t as any); 
+                            broadcastState({ theme: t }); 
+                            triggerHamoodiMessage(HAMOODI_MESSAGES.THEME);
+                          }}
                           className={`py-1 lg:py-2 border-2 lg:border-4 border-[#1A1A1A] rounded-lg lg:rounded-xl font-black text-[7px] lg:text-xs capitalize transition-all ${theme === t ? 'bg-yellow-400' : 'bg-white'}`}
                         >
                           {t === 'classic' ? 'كلاسيكي' : t === 'night' ? 'ليلي' : t === 'wooden' ? 'خشبي' : 'ملكي'}
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Win Condition Section */}
+                  <div className="flex flex-col gap-2 p-3 bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl">
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-[10px] lg:text-sm">المضيف الذكي (بدون مضيف)</span>
+                      <button 
+                        onClick={() => { 
+                          const next = !isSmartHost;
+                          setIsSmartHost(next);
+                          broadcastState({ isSmartHost: next });
+                          playSound(SOUNDS.CLICK); 
+                        }}
+                        className={`w-10 h-6 rounded-full border-2 border-[#1A1A1A] transition-colors relative ${isSmartHost ? 'bg-[#22C55E]' : 'bg-gray-300'}`}
+                      >
+                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white border-2 border-[#1A1A1A] transition-transform ${isSmartHost ? 'right-0.5' : 'left-0.5'}`} />
+                      </button>
+                    </div>
+                    <p className="text-[7px] lg:text-[10px] text-gray-400 font-bold">عند التفعيل، يمكن للضيوف التحكم في اللعبة والأسئلة تلقائياً.</p>
                   </div>
 
                   {/* Win Condition Section */}
@@ -3641,7 +3880,12 @@ export default function App() {
                         <button 
                           key={w}
                           disabled={!isHost}
-                          onClick={() => { setWinCondition(w); broadcastState({ winCondition: w }); playSound(SOUNDS.CLICK); }}
+                          onClick={() => { 
+                            setWinCondition(w); 
+                            broadcastState({ winCondition: w }); 
+                            playSound(SOUNDS.CLICK); 
+                            triggerHamoodiMessage(HAMOODI_MESSAGES.WIN_COND);
+                          }}
                           className={`flex-1 h-6 lg:h-10 border-2 lg:border-4 border-[#1A1A1A] rounded-lg font-black text-[8px] lg:text-sm transition-all ${winCondition === w ? 'bg-[#1A1A1A] text-white' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
                         >
                           {w === 1 ? '1' : w*2-1}
@@ -3800,9 +4044,23 @@ export default function App() {
       {screen === 'lobby' && (
         <div className="h-screen flex flex-col items-center justify-center gap-2 lg:gap-8 bg-[#F0F4E8] p-2 lg:p-4 overflow-hidden">
           <div className="bg-white border-4 border-[#1A1A1A] rounded-2xl lg:rounded-3xl p-4 lg:p-10 text-center shadow-[4px_4px_0_#1A1A1A] lg:shadow-[8px_8px_0_#1A1A1A] w-full max-w-[320px] lg:max-w-[400px]">
+            <div className="mb-4">
+              <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} />
+            </div>
             <h2 className="text-[clamp(1rem,4vw,1.75rem)] font-black mb-3 lg:mb-6">مرحباً {playerName}</h2>
             
             <div className="flex flex-col gap-2 lg:gap-4">
+              <div className="text-right mb-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">تغيير اسمك</label>
+                <input 
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="اسمك"
+                  className="w-full border-2 border-[#1A1A1A] rounded-xl px-3 py-2 text-sm font-bold bg-white outline-none"
+                />
+              </div>
+
               <button 
                 onClick={() => { playSound(SOUNDS.NEW_GAME); createRoom(); }}
                 className="bg-[#22C55E] text-white border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#166534] lg:shadow-[4px_4px_0_#166534] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
@@ -3848,86 +4106,105 @@ export default function App() {
       )}
 
       {screen === 'game' && (
-        <div className={`flex-1 flex flex-col lg:flex-row overflow-hidden ${currentTheme.bg} transition-colors duration-700`}>
-      {/* Dynamic Background with Blur */}
-      <div 
-        className={`absolute inset-0 ${currentTheme.bg} transition-all duration-1000 ease-in-out ${selectedIdx !== -1 ? 'blur-xl scale-110 opacity-60' : 'blur-0 scale-100 opacity-100'}`} 
-      />
+        <div className={`flex-1 flex flex-col lg:flex-row overflow-hidden ${currentTheme.bg} transition-colors duration-700 relative`}>
+          {/* Sidebar Toggle Button (Desktop) */}
+          <div className="hidden lg:block fixed top-4 right-4 z-50">
+            <button 
+              onClick={() => {
+                playSound(SOUNDS.CLICK);
+                setIsSidebarHidden(!isSidebarHidden);
+              }}
+              className="p-3 bg-white border-4 border-[#1A1A1A] rounded-2xl shadow-[4px_4px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-all pointer-events-auto"
+              title={isSidebarHidden ? "إظهار القائمة" : "إخفاء القائمة"}
+            >
+              {isSidebarHidden ? <ChevronLeft size={24} /> : <X size={24} />}
+            </button>
+          </div>
+
+          <div 
+            className={`absolute inset-0 ${currentTheme.bg} transition-all duration-1000 ease-in-out ${selectedIdx !== -1 ? 'blur-xl scale-110 opacity-60' : 'blur-0 scale-100 opacity-100'}`} 
+          />
 
       {/* Logo & Scoreboard (Fixed Top) */}
-      <div className="fixed top-0 left-0 right-0 z-40 pointer-events-none flex flex-col items-center p-2 lg:p-4 gap-2">
+      <div className={`fixed top-0 left-0 right-0 z-40 pointer-events-none flex ${isLandscape ? 'flex-row justify-between items-start px-4' : 'flex-col items-center'} p-2 lg:p-4 gap-2`}>
         <motion.div 
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl px-4 lg:px-8 py-1 lg:py-2 shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] pointer-events-auto"
+          className={`bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl px-4 lg:px-8 py-1 lg:py-2 shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] pointer-events-auto ${isLandscape ? 'scale-75 origin-top-left' : ''}`}
         >
           <h1 className="text-[clamp(0.8rem,3vw,1.8rem)] font-black text-[#1A1A1A] tracking-tight whitespace-nowrap">Hroof With Hamoodi</h1>
         </motion.div>
 
         {screen === 'game' && (
-          <motion.div 
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className={`flex items-center gap-4 lg:gap-12 bg-white border-4 lg:border-6 border-[#1A1A1A] rounded-2xl lg:rounded-[24px] px-4 lg:px-8 py-1 lg:py-2 shadow-[4px_4px_0_#1A1A1A] pointer-events-auto scale-90 lg:scale-100`}
-          >
-            <div className="text-center">
-              <p className="text-[8px] lg:text-[10px] font-black text-red-500 uppercase tracking-widest mb-0.5">{teamNames.red}</p>
-              <div className="flex gap-1 justify-center">
-                {[...Array(winCondition)].map((_, i) => (
-                  <motion.div 
-                    key={i} 
-                    animate={scores.red > i ? { scale: [1, 1.3, 1], backgroundColor: '#EF4444' } : {}}
-                    className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full border-2 border-[#1A1A1A] ${scores.red > i ? 'bg-red-500' : 'bg-gray-100'}`} 
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="text-xl lg:text-3xl font-black text-[#1A1A1A] flex flex-col items-center">
-              <div className="flex items-center gap-3">
-                <motion.span key={`red-score-${scores.red}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.red}</motion.span>
-                <span className="opacity-20">-</span>
-                <motion.span key={`green-score-${scores.green}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.green}</motion.span>
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-[8px] lg:text-[10px] font-black text-green-500 uppercase tracking-widest mb-0.5">{teamNames.green}</p>
-              <div className="flex gap-1 justify-center">
-                {[...Array(winCondition)].map((_, i) => (
-                  <motion.div 
-                    key={i} 
-                    animate={scores.green > i ? { scale: [1, 1.3, 1], backgroundColor: '#22C55E' } : {}}
-                    className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full border-2 border-[#1A1A1A] ${scores.green > i ? 'bg-green-500' : 'bg-gray-100'}`} 
-                  />
-                ))}
-              </div>
-            </div>
-          </motion.div>
+          <div className="pointer-events-auto scale-75 lg:scale-100 origin-top">
+            <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} />
+          </div>
         )}
 
         {screen === 'game' && (
-          <div className="flex flex-col items-center gap-1">
-            {mvp && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-yellow-100 border-2 border-[#1A1A1A] rounded-lg px-3 py-0.5 shadow-[2px_2px_0_#1A1A1A] flex items-center gap-2"
-              >
-                <Trophy size={12} className="text-yellow-600" />
-                <span className="font-black text-[10px]">
-                  نجم اللقاء: {mvp[0]} ({mvp[1]} إجابة)
-                </span>
-              </motion.div>
-            )}
-            {lastAnswerer && (
-              <motion.div 
-                key={lastAnswerer}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-[10px] font-bold text-gray-500 italic bg-white/80 px-2 rounded-full"
-              >
-                آخر من أجاب: {lastAnswerer} ✨
-              </motion.div>
-            )}
+          <div className={`flex ${isLandscape ? 'flex-col items-end' : 'flex-col items-center'} gap-2`}>
+            <motion.div 
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className={`flex items-center gap-4 lg:gap-12 bg-white border-4 lg:border-6 border-[#1A1A1A] rounded-2xl lg:rounded-[24px] px-4 lg:px-8 py-1 lg:py-2 shadow-[4px_4px_0_#1A1A1A] pointer-events-auto ${isLandscape ? 'scale-75 origin-top-right' : 'scale-90 lg:scale-100'}`}
+            >
+              <div className="text-center">
+                <p className="text-[8px] lg:text-[10px] font-black text-red-500 uppercase tracking-widest mb-0.5">{teamNames.red}</p>
+                <div className="flex gap-1 justify-center">
+                  {[...Array(winCondition)].map((_, i) => (
+                    <motion.div 
+                      key={i} 
+                      animate={scores.red > i ? { scale: [1, 1.3, 1], backgroundColor: '#EF4444' } : {}}
+                      className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full border-2 border-[#1A1A1A] ${scores.red > i ? 'bg-red-500' : 'bg-gray-100'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="text-xl lg:text-3xl font-black text-[#1A1A1A] flex flex-col items-center">
+                <div className="flex items-center gap-3">
+                  <motion.span key={`red-score-${scores.red}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.red}</motion.span>
+                  <span className="opacity-20">-</span>
+                  <motion.span key={`green-score-${scores.green}`} initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{scores.green}</motion.span>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[8px] lg:text-[10px] font-black text-green-500 uppercase tracking-widest mb-0.5">{teamNames.green}</p>
+                <div className="flex gap-1 justify-center">
+                  {[...Array(winCondition)].map((_, i) => (
+                    <motion.div 
+                      key={i} 
+                      animate={scores.green > i ? { scale: [1, 1.3, 1], backgroundColor: '#22C55E' } : {}}
+                      className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full border-2 border-[#1A1A1A] ${scores.green > i ? 'bg-green-500' : 'bg-gray-100'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            <div className={`flex flex-col ${isLandscape ? 'items-end' : 'items-center'} gap-1 pointer-events-auto`}>
+              {mvp && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-yellow-100 border-2 border-[#1A1A1A] rounded-lg px-3 py-0.5 shadow-[2px_2px_0_#1A1A1A] flex items-center gap-2"
+                >
+                  <Trophy size={12} className="text-yellow-600" />
+                  <span className="font-black text-[10px]">
+                    نجم اللقاء: {mvp[0]} ({mvp[1]} إجابة)
+                  </span>
+                </motion.div>
+              )}
+              {lastAnswerer && (
+                <motion.div 
+                  key={lastAnswerer}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-[10px] font-bold text-gray-500 italic bg-white/80 px-2 rounded-full"
+                >
+                  آخر من أجاب: {lastAnswerer} ✨
+                </motion.div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -3944,10 +4221,10 @@ export default function App() {
                   animate={{ x: 0 }}
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                  className="fixed inset-y-0 right-0 w-full lg:w-[400px] z-[100] flex shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
+                  className={`fixed inset-y-0 right-0 ${isLandscape ? 'w-[300px]' : 'w-full lg:w-[400px]'} z-[100] flex shadow-[-10px_0_30px_rgba(0,0,0,0.2)]`}
                 >
                   <aside 
-                    className={`h-full w-full flex flex-col p-4 lg:p-8 gap-4 lg:gap-6 border-r-4 border-[#1A1A1A] ${currentTheme.bg} overflow-y-auto relative`}
+                    className={`h-full w-full flex flex-col p-4 lg:p-8 gap-4 lg:gap-6 border-r-4 border-[#1A1A1A] ${currentTheme.bg} overflow-y-auto relative pt-24 lg:pt-32`}
                   >
                     {/* Sticky Close Button */}
                     <div className="sticky top-0 z-50 flex justify-end mb-2">
@@ -3964,25 +4241,32 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col gap-6"
                     >
-                      <div className="bg-white border-4 border-[#1A1A1A] rounded-[32px] p-6 lg:p-10 text-center shadow-[8px_8px_0_#1A1A1A]">
+                      <div className="bg-white border-4 border-[#1A1A1A] rounded-[32px] p-6 lg:p-10 text-center shadow-[8px_8px_0_#1A1A1A] relative group">
+                        <button 
+                          onClick={() => { playSound(SOUNDS.CLICK); setIsLetterExpanded(true); }}
+                          className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full border-2 border-[#1A1A1A] hover:bg-blue-100 transition-colors shadow-[2px_2px_0_#1A1A1A] lg:opacity-0 lg:group-hover:opacity-100"
+                          title="تكبير الحرف"
+                        >
+                          <Maximize2 size={16} />
+                        </button>
                         <h3 className="text-[clamp(3rem,10vw,6rem)] font-black text-[#1A1A1A] leading-none mb-2">{currentLetter}</h3>
                         <p className={`text-xs lg:text-sm font-black uppercase tracking-[0.2em] ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
                           {tiles[selectedIdx] === 'red' ? 'فريق أحمر' : tiles[selectedIdx] === 'green' ? 'فريق أخضر' : 'محايدة'}
                         </p>
                       </div>
 
-                      {currentQuestions.length > 0 ? (
+                      {currentQuestions.length > 0 && currentQ ? (
                         <>
                           <div className="flex justify-between items-center px-2">
-                            <span className="text-sm font-black text-gray-400">{usedQuestions[currentLetter]?.length || 0} / {currentQuestions.length}</span>
+                            <span className="text-sm font-black text-gray-400">{usedQuestions[currentLetter!]?.length || 0} / {currentQuestions.length}</span>
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => { 
                                   playSound(SOUNDS.NEXT_Q); 
-                                  const nextIdx = getRandomQuestionIdx(currentLetter);
-                                  setQIdx(nextIdx); 
+                                  const result = getRandomQuestionIdx(currentLetter!);
+                                  setQIdx(result.idx); 
                                   setShowAnswer(false); 
-                                  broadcastState({ qIdx: nextIdx, showAnswer: false, usedQuestions: usedQuestions });
+                                  broadcastState({ qIdx: result.idx, showAnswer: false, usedQuestions: result.nextUsed });
                                 }}
                                 className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform"
                               >
@@ -4056,11 +4340,11 @@ export default function App() {
             {/* Main Board (Shrinks and stays visible) */}
             <motion.main 
               layout
-              className="flex-1 flex flex-col items-center justify-center p-1 lg:p-10 relative overflow-hidden pt-32 lg:pt-48"
+              className="flex-1 flex flex-col items-center justify-center p-1 lg:p-10 relative overflow-hidden pt-10 lg:pt-20"
               animate={{ 
-                scale: selectedIdx !== -1 ? (isLandscape ? 0.65 : 0.75) : 1,
-                x: selectedIdx !== -1 ? (isLandscape ? -220 : 0) : 0,
-                y: selectedIdx !== -1 ? (isLandscape ? 0 : -60) : 0,
+                scale: selectedIdx !== -1 ? (isLandscape ? 0.75 : 0.85) : (isSidebarHidden ? 1.2 : 1.1),
+                x: selectedIdx !== -1 ? (isLandscape ? (isSidebarHidden ? -100 : -220) : 0) : 0,
+                y: selectedIdx !== -1 ? (isLandscape ? 0 : -80) : 0,
               }}
               transition={{ type: 'spring', stiffness: 150, damping: 25 }}
             >
@@ -4082,8 +4366,8 @@ export default function App() {
 
             <svg 
               viewBox={`0 0 ${550 * cellSize} ${500 * cellSize}`} 
-              className="w-full max-w-[600px] max-h-[60vh] lg:max-h-[70vh] drop-shadow-2xl overflow-visible relative z-10"
-              style={{ maxWidth: `${600 * cellSize}px` }}
+              className="w-full max-w-[900px] max-h-[85vh] drop-shadow-2xl overflow-visible relative z-10"
+              style={{ maxWidth: `${900 * cellSize}px` }}
             >
               {Array.from({ length: 25 }).map((_, idx) => {
                 const r = Math.floor(idx / 5);
@@ -4122,7 +4406,7 @@ export default function App() {
             </button>
           </div>
 
-          <aside className={`fixed bottom-24 left-4 right-4 lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:w-72 flex flex-col p-4 lg:p-6 gap-4 border-4 lg:border-0 lg:border-r-4 border-[#1A1A1A] lg:border-[#1A1A1A]/10 ${currentTheme.bg} z-20 order-3 lg:order-3 overflow-y-auto rounded-3xl lg:rounded-none shadow-2xl lg:shadow-none max-h-[60vh] lg:max-h-screen ${isHost && selectedIdx !== -1 ? 'hidden lg:flex' : (showControlsMobile ? 'flex' : 'hidden lg:flex')}`}>
+          <aside className={`fixed bottom-24 left-4 right-4 lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:w-72 flex flex-col p-4 lg:p-6 gap-4 border-4 lg:border-0 lg:border-r-4 border-[#1A1A1A] lg:border-[#1A1A1A]/10 ${currentTheme.bg} z-20 order-3 lg:order-3 overflow-y-auto rounded-3xl lg:rounded-none shadow-2xl lg:shadow-none max-h-[60vh] lg:max-h-screen ${isHost && selectedIdx !== -1 ? 'hidden lg:flex' : (showControlsMobile ? 'flex' : 'hidden lg:flex')} ${isSidebarHidden ? 'lg:hidden' : ''}`}>
             <motion.div 
               initial={{ x: 50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
@@ -4290,7 +4574,18 @@ export default function App() {
               </div>
             </div>
 
-            <motion.button initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} onClick={() => { playSound(SOUNDS.CLICK); setScreen('lobby'); socket?.disconnect(); setSocket(io()); }} className={`${currentTheme.board} ${currentTheme.text} border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 mt-4 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]`}><LogOut size={16} /> خروج</motion.button>
+            <motion.button 
+              initial={{ y: 50, opacity: 0 }} 
+              animate={{ y: 0, opacity: 1 }} 
+              onClick={() => { 
+                playSound(SOUNDS.CLICK); 
+                socket?.emit("leave-room", { roomCode });
+                setScreen('lobby'); 
+              }} 
+              className={`${currentTheme.board} ${currentTheme.text} border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 mt-4 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]`}
+            >
+              <LogOut size={16} /> خروج
+            </motion.button>
           </aside>
         </>
       ) : (
@@ -4373,7 +4668,7 @@ export default function App() {
                 className="fixed inset-y-0 right-0 w-full lg:w-[400px] z-[100] flex shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
               >
                 <aside 
-                  className={`h-full w-full flex flex-col p-4 lg:p-8 gap-4 lg:gap-6 border-r-4 border-[#1A1A1A] bg-[#F0F4E8] overflow-y-auto relative`}
+                  className={`h-full w-full flex flex-col p-4 lg:p-8 gap-4 lg:gap-6 border-r-4 border-[#1A1A1A] bg-[#F0F4E8] overflow-y-auto relative pt-24 lg:pt-32`}
                 >
                   {/* Sticky Close Button */}
                   <div className="sticky top-0 z-50 flex justify-end mb-2">
@@ -4424,19 +4719,28 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col gap-6"
                     >
-                      <div className="bg-white border-4 border-[#1A1A1A] rounded-[32px] p-6 lg:p-10 text-center shadow-[8px_8px_0_#1A1A1A]">
+                      <div className="bg-white border-4 border-[#1A1A1A] rounded-[32px] p-6 lg:p-10 text-center shadow-[8px_8px_0_#1A1A1A] relative group">
+                        <button 
+                          onClick={() => { playSound(SOUNDS.CLICK); setIsLetterExpanded(true); }}
+                          className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full border-2 border-[#1A1A1A] hover:bg-blue-100 transition-colors shadow-[2px_2px_0_#1A1A1A] lg:opacity-0 lg:group-hover:opacity-100"
+                          title="تكبير الحرف"
+                        >
+                          <Maximize2 size={16} />
+                        </button>
                         <h3 className="text-[clamp(3rem,10vw,6rem)] font-black text-[#1A1A1A] leading-none mb-2">{currentLetter}</h3>
                         <p className={`text-xs lg:text-sm font-black uppercase tracking-[0.2em] ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
                           {tiles[selectedIdx] === 'red' ? 'فريق أحمر' : tiles[selectedIdx] === 'green' ? 'فريق أخضر' : 'محايدة'}
                         </p>
                       </div>
-                      {currentQuestions.length > 0 && (
+                      {currentQuestions.length > 0 && currentQ && (
                         <div className="flex flex-col gap-4">
                           <div className="flex justify-end">
                             <button 
                               onClick={() => {
-                                navigator.clipboard.writeText(currentQ.q);
-                                playSound(SOUNDS.CLICK);
+                                if (currentQ) {
+                                  navigator.clipboard.writeText(currentQ.q);
+                                  playSound(SOUNDS.CLICK);
+                                }
                               }}
                               className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform flex items-center gap-1"
                             >
@@ -4453,6 +4757,27 @@ export default function App() {
                           >
                             {currentQ.q}
                           </motion.div>
+
+                          {isSmartHost && (
+                            <div className="flex flex-col gap-4 mt-4">
+                              <button 
+                                onClick={() => { playSound(SOUNDS.CLICK); setShowAnswer(!showAnswer); broadcastState({ showAnswer: !showAnswer }); }}
+                                className={`w-full py-4 rounded-2xl border-4 border-[#1A1A1A] font-black shadow-[4px_4px_0_#1A1A1A] transition-all ${showAnswer ? 'bg-yellow-400' : 'bg-white'}`}
+                              >
+                                {showAnswer ? 'إخفاء الإجابة' : 'إظهار الإجابة'}
+                              </button>
+                              {showAnswer && (
+                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-green-50 border-4 border-green-500 rounded-2xl p-4 text-center font-black text-green-700">
+                                  {currentQ.a}
+                                </motion.div>
+                              )}
+                              <div className="grid grid-cols-2 gap-4">
+                                <button onClick={() => markTile('red')} className="bg-red-500 text-white border-4 border-[#1A1A1A] rounded-2xl py-4 font-black shadow-[4px_4px_0_#1A1A1A] hover:scale-105 active:scale-95">فريق أحمر</button>
+                                <button onClick={() => markTile('green')} className="bg-green-500 text-white border-4 border-[#1A1A1A] rounded-2xl py-4 font-black shadow-[4px_4px_0_#1A1A1A] hover:scale-105 active:scale-95">فريق أخضر</button>
+                              </div>
+                              <button onClick={() => markTile('neutral')} className="bg-gray-400 text-white border-4 border-[#1A1A1A] rounded-2xl py-3 font-black shadow-[4px_4px_0_#1A1A1A] hover:scale-105 active:scale-95">إجابة خاطئة</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </motion.div>
@@ -4475,7 +4800,11 @@ export default function App() {
                     </div>
 
                     <button 
-                      onClick={() => { playSound(SOUNDS.CLICK); setScreen('lobby'); socket?.disconnect(); setSocket(io()); }} 
+                      onClick={() => { 
+                        playSound(SOUNDS.CLICK); 
+                        socket?.emit("leave-room", { roomCode });
+                        setScreen('lobby'); 
+                      }} 
                       className="w-full bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-4 font-black shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform"
                     >
                       <LogOut size={20} /> خروج
@@ -5195,6 +5524,48 @@ export default function App() {
             </motion.div>
           </motion.div>
         )}
+        {/* Fullscreen Letter Overlay */}
+        <AnimatePresence>
+          {isLetterExpanded && currentLetter && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 lg:p-12"
+              onClick={() => setIsLetterExpanded(false)}
+            >
+              <motion.div 
+                initial={{ scale: 0.5, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0.5, rotate: 10 }}
+                className="bg-white border-[8px] lg:border-[16px] border-[#1A1A1A] rounded-[48px] lg:rounded-[80px] p-12 lg:p-24 text-center shadow-[16px_16px_0_#1A1A1A] lg:shadow-[32px_32px_0_#1A1A1A] relative w-full max-w-4xl aspect-square flex flex-col items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button 
+                  onClick={() => setIsLetterExpanded(false)}
+                  className="absolute top-6 right-6 lg:top-12 lg:right-12 p-3 lg:p-6 bg-gray-100 rounded-full border-4 lg:border-8 border-[#1A1A1A] hover:bg-red-100 transition-colors shadow-[4px_4px_0_#1A1A1A]"
+                >
+                  <X size={isLandscape ? 24 : 48} />
+                </button>
+                
+                <motion.h2 
+                  animate={{ y: [0, -20, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                  className="text-[clamp(8rem,50vw,30rem)] font-black text-[#1A1A1A] leading-none select-none font-arabic drop-shadow-2xl"
+                >
+                  {currentLetter}
+                </motion.h2>
+                
+                <div className="mt-8 lg:mt-16 flex flex-col items-center gap-2 lg:gap-4">
+                  <p className={`text-xl lg:text-5xl font-black uppercase tracking-[0.3em] lg:tracking-[0.5em] ${tiles[selectedIdx] === 'red' ? 'text-red-600' : tiles[selectedIdx] === 'green' ? 'text-green-600' : 'text-gray-400'}`}>
+                    {tiles[selectedIdx] === 'red' ? teamNames.red : tiles[selectedIdx] === 'green' ? teamNames.green : 'حرف محايد'}
+                  </p>
+                  <div className="h-2 lg:h-4 w-32 lg:w-64 bg-[#1A1A1A] rounded-full opacity-10" />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </AnimatePresence>
     </div>
   );

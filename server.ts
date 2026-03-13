@@ -150,12 +150,50 @@ async function startServer() {
       }
     });
 
+    socket.on("leave-room", ({ roomCode }) => {
+      socket.leave(roomCode);
+      const room = rooms.get(roomCode);
+      if (room) {
+        const playerIndex = room.players.findIndex((p: any) => p.id === socket.id);
+        if (playerIndex !== -1) {
+          room.players.splice(playerIndex, 1);
+          if (room.players.length === 0) {
+            rooms.delete(roomCode);
+          } else {
+            if (socket.id === room.hostId) {
+              room.hostId = room.players[0].id;
+              io.to(roomCode).emit("new-host", room.hostId);
+            }
+            io.to(roomCode).emit("player-list", room.players);
+          }
+        }
+      }
+    });
+
     socket.on("update-state", ({ roomCode, state }) => {
       const room = rooms.get(roomCode);
       if (room) {
         Object.assign(room, state);
         socket.to(roomCode).emit("room-state", room);
       }
+    });
+
+    socket.on("disconnect", () => {
+      rooms.forEach((room, roomCode) => {
+        const playerIndex = room.players.findIndex((p: any) => p.id === socket.id);
+        if (playerIndex !== -1) {
+          room.players.splice(playerIndex, 1);
+          if (room.players.length === 0) {
+            rooms.delete(roomCode);
+          } else {
+            if (socket.id === room.hostId) {
+              room.hostId = room.players[0].id;
+              io.to(roomCode).emit("new-host", room.hostId);
+            }
+            io.to(roomCode).emit("player-list", room.players);
+          }
+        }
+      });
     });
   });
 
