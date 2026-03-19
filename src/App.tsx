@@ -2583,35 +2583,59 @@ const Hamoodi = ({ mood, name, message }: { mood: HamoodiMood, name: string, mes
           emoji: '😊',
           message: `أهلاً بك يا ${name}! أنا سعيد جداً اليوم!`,
           color: 'bg-green-100',
-          borderColor: 'border-green-500'
+          borderColor: 'border-green-500',
+          animation: {
+            y: [0, -10, 0],
+            rotate: [0, 5, -5, 0],
+            transition: { repeat: Infinity, duration: 2 }
+          }
         };
       case 'excited':
         return {
           emoji: '🤩',
           message: `يا للروعة يا ${name}! أنت تبلي بلاءً حسناً!`,
           color: 'bg-yellow-100',
-          borderColor: 'border-yellow-500'
+          borderColor: 'border-yellow-500',
+          animation: {
+            scale: [1, 1.1, 1],
+            rotate: [0, 10, -10, 0],
+            y: [0, -15, 0],
+            transition: { repeat: Infinity, duration: 0.5 }
+          }
         };
       case 'sleepy':
         return {
           emoji: '😴',
           message: `يا إلهي يا ${name}... أشعر بالنعاس قليلاً...`,
           color: 'bg-blue-100',
-          borderColor: 'border-blue-500'
+          borderColor: 'border-blue-500',
+          animation: {
+            opacity: [0.6, 1, 0.6],
+            scale: [0.95, 1, 0.95],
+            transition: { repeat: Infinity, duration: 3 }
+          }
         };
       case 'sad':
         return {
           emoji: '😢',
           message: `أوه لا يا ${name}... حظاً أوفر في المرة القادمة!`,
           color: 'bg-red-100',
-          borderColor: 'border-red-500'
+          borderColor: 'border-red-500',
+          animation: {
+            x: [-2, 2, -2],
+            transition: { repeat: Infinity, duration: 0.2 }
+          }
         };
       default:
         return {
           emoji: '😐',
           message: `كيف حالك يا ${name}؟ لنبدأ اللعب!`,
           color: 'bg-gray-100',
-          borderColor: 'border-gray-500'
+          borderColor: 'border-gray-500',
+          animation: {
+            y: [0, -2, 0],
+            transition: { repeat: Infinity, duration: 4 }
+          }
         };
     }
   };
@@ -2624,16 +2648,26 @@ const Hamoodi = ({ mood, name, message }: { mood: HamoodiMood, name: string, mes
       layout
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      className={`flex items-center gap-3 p-3 rounded-2xl border-4 ${content.borderColor} ${content.color} shadow-[4px_4px_0_#1A1A1A] max-w-[250px] pointer-events-auto`}
+      className={`flex items-center gap-3 p-3 rounded-2xl border-4 ${content.borderColor} ${content.color} shadow-[4px_4px_0_#1A1A1A] max-w-[250px] pointer-events-auto relative overflow-hidden`}
     >
+      <motion.div
+        className="absolute inset-0 opacity-10 pointer-events-none"
+        animate={{
+          background: mood === 'excited' ? [
+            'radial-gradient(circle, #FBBF24 0%, transparent 70%)',
+            'radial-gradient(circle, #F59E0B 0%, transparent 70%)',
+            'radial-gradient(circle, #FBBF24 0%, transparent 70%)'
+          ] : 'none'
+        }}
+        transition={{ duration: 1, repeat: Infinity }}
+      />
       <motion.span 
-        animate={mood === 'excited' ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-        transition={{ repeat: Infinity, duration: 1 }}
-        className="text-3xl"
+        animate={content.animation}
+        className="text-3xl z-10"
       >
         {content.emoji}
       </motion.span>
-      <div className="flex flex-col">
+      <div className="flex flex-col z-10">
         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Hamoodi</span>
         <p className="text-[10px] lg:text-xs font-bold text-[#1A1A1A] leading-tight">{displayMessage}</p>
       </div>
@@ -2647,6 +2681,7 @@ export default function App() {
   const [hamoodiMood, setHamoodiMood] = useState<HamoodiMood>('neutral');
   const [isSmartHost, setIsSmartHost] = useState(false);
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+
   const updateHamoodiMood = (mood: HamoodiMood) => {
     setHamoodiMood(mood);
     if (isHost || isSmartHost) broadcastState({ hamoodiMood: mood });
@@ -2691,6 +2726,7 @@ export default function App() {
   const [hideQuestionsFromGuest, setHideQuestionsFromGuest] = useState(false);
   const [fontSize, setFontSize] = useState(1);
   const [cellSize, setCellSize] = useState(1);
+
   const [isSoundSettingsOpen, setIsSoundSettingsOpen] = useState(false);
   const [customSounds, setCustomSounds] = useState<Record<string, string>>(() => {
     try {
@@ -2915,6 +2951,53 @@ export default function App() {
   const [editingLetter, setEditingLetter] = useState<string | null>(null);
   const [editorBankName, setEditorBankName] = useState(selectedBankName);
   const [newQ, setNewQ] = useState("");
+
+  // Load game progress
+  useEffect(() => {
+    const saved = localStorage.getItem('hroof_progress');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.tiles) setTiles(data.tiles);
+        if (data.letters) setLetters(data.letters);
+        if (data.scores) setScores(data.scores);
+        if (data.selectedIdx !== undefined) setSelectedIdx(data.selectedIdx);
+        if (data.screen) setScreen(data.screen);
+        if (data.teams) setTeams(data.teams);
+        if (data.playerStats) setPlayerStats(data.playerStats);
+        if (data.usedQuestions) setUsedQuestions(data.usedQuestions);
+        if (data.matchLog) setMatchLog(data.matchLog);
+        if (data.teamNames) setTeamNames(data.teamNames);
+        if (data.theme) setTheme(data.theme);
+        if (data.winCondition) setWinCondition(data.winCondition);
+        if (data.timerDuration) setTimerDuration(data.timerDuration);
+      } catch (e) {
+        console.error("Failed to load game progress", e);
+      }
+    }
+  }, []);
+
+  // Save game progress
+  useEffect(() => {
+    if (screen === 'game') {
+      const data = {
+        tiles,
+        letters,
+        scores,
+        selectedIdx,
+        screen,
+        teams,
+        playerStats,
+        usedQuestions,
+        matchLog,
+        teamNames,
+        theme,
+        winCondition,
+        timerDuration
+      };
+      localStorage.setItem('hroof_progress', JSON.stringify(data));
+    }
+  }, [tiles, letters, scores, selectedIdx, screen, teams, playerStats, usedQuestions, matchLog, teamNames, theme, winCondition, timerDuration]);
   const [newA, setNewA] = useState("");
 
   const [bulkText, setBulkText] = useState("");
@@ -3917,6 +4000,15 @@ export default function App() {
                   {/* Action Buttons Section */}
                   <div className="flex flex-col gap-1 lg:gap-2">
                     <button 
+                      onClick={() => {
+                        localStorage.removeItem('hroof_progress');
+                        window.location.reload();
+                      }}
+                      className="w-full bg-red-50 text-red-600 border-2 lg:border-4 border-red-600 rounded-xl lg:rounded-2xl py-2 font-black text-[8px] lg:text-sm shadow-[2px_2px_0_#991B1B] hover:scale-105 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw size={14} /> مسح التقدم المحفوظ
+                    </button>
+                    <button 
                       onClick={() => { playSound(SOUNDS.CLICK); fileInputRef.current?.click(); }}
                       className="bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-lg lg:rounded-xl py-1 lg:py-3 font-black shadow-[2px_2px_0_#1A1A1A] flex items-center justify-center gap-1 text-[8px] lg:text-sm"
                     >
@@ -4136,13 +4228,13 @@ export default function App() {
         </motion.div>
 
         {screen === 'game' && (
-          <div className="pointer-events-auto scale-75 lg:scale-100 origin-top">
+          <div key="hamoodi-container" className="pointer-events-auto scale-75 lg:scale-100 origin-top">
             <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} />
           </div>
         )}
 
         {screen === 'game' && (
-          <div className={`flex ${isLandscape ? 'flex-col items-end' : 'flex-col items-center'} gap-2`}>
+          <div key="scoreboard-container" className={`flex ${isLandscape ? 'flex-col items-end' : 'flex-col items-center'} gap-2`}>
             <motion.div 
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -4350,16 +4442,16 @@ export default function App() {
             >
             {/* Team Goal Indicators */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-6 lg:h-8 bg-green-500/10 border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center">
+              <div key="host-goal-top" className="absolute top-0 left-0 w-full h-6 lg:h-8 bg-green-500/10 border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center">
                 <span className="text-green-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.green} Goal</span>
               </div>
-              <div className="absolute bottom-0 left-0 w-full h-6 lg:h-8 bg-green-500/10 border-t-2 lg:border-t-4 border-green-500/30 flex items-center justify-center">
+              <div key="host-goal-bottom" className="absolute bottom-0 left-0 w-full h-6 lg:h-8 bg-green-500/10 border-t-2 lg:border-t-4 border-green-500/30 flex items-center justify-center">
                 <span className="text-green-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.green} Goal</span>
               </div>
-              <div className="absolute top-0 right-0 h-full w-6 lg:w-8 bg-red-500/10 border-l-2 lg:border-l-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]">
+              <div key="host-goal-right" className="absolute top-0 right-0 h-full w-6 lg:w-8 bg-red-500/10 border-l-2 lg:border-l-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]">
                 <span className="text-red-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.red} Goal</span>
               </div>
-              <div className="absolute top-0 left-0 h-full w-6 lg:w-8 bg-red-500/10 border-r-2 lg:border-r-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]">
+              <div key="host-goal-left" className="absolute top-0 left-0 h-full w-6 lg:w-8 bg-red-500/10 border-r-2 lg:border-r-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]">
                 <span className="text-red-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.red} Goal</span>
               </div>
             </div>
@@ -4546,8 +4638,8 @@ export default function App() {
             <div className="pt-4 border-t-2 border-gray-100">
               <h3 className="text-[10px] font-black text-gray-400 uppercase mb-2">Players Online</h3>
               <div className="flex flex-wrap gap-1">
-                {playerList.map(p => (
-                  <span key={p.id} className="text-[10px] font-bold bg-white border-2 border-[#1A1A1A] px-2 py-0.5 rounded-full">{p.name}</span>
+                {playerList.map((p, i) => (
+                  <span key={`${p.id}-${i}`} className="text-[10px] font-bold bg-white border-2 border-[#1A1A1A] px-2 py-0.5 rounded-full">{p.name}</span>
                 ))}
               </div>
             </div>
@@ -4602,16 +4694,16 @@ export default function App() {
           >
             {/* Team Goal Indicators */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className={`absolute top-0 left-0 w-full h-6 lg:h-8 ${theme === 'night' ? 'bg-green-500/20' : 'bg-green-500/10'} border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center`}>
+              <div key="goal-indicator-top" className={`absolute top-0 left-0 w-full h-6 lg:h-8 ${theme === 'night' ? 'bg-green-500/20' : 'bg-green-500/10'} border-b-2 lg:border-b-4 border-green-500/30 flex items-center justify-center`}>
                 <span className="text-green-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.green} Goal</span>
               </div>
-              <div className={`absolute bottom-0 left-0 w-full h-6 lg:h-8 ${theme === 'night' ? 'bg-green-500/20' : 'bg-green-500/10'} border-t-2 lg:border-t-4 border-green-500/30 flex items-center justify-center`}>
+              <div key="goal-indicator-bottom" className={`absolute bottom-0 left-0 w-full h-6 lg:h-8 ${theme === 'night' ? 'bg-green-500/20' : 'bg-green-500/10'} border-t-2 lg:border-t-4 border-green-500/30 flex items-center justify-center`}>
                 <span className="text-green-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.green} Goal</span>
               </div>
-              <div className={`absolute top-0 right-0 h-full w-6 lg:w-8 ${theme === 'night' ? 'bg-red-500/20' : 'bg-red-500/10'} border-l-2 lg:border-l-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]`}>
+              <div key="goal-indicator-right" className={`absolute top-0 right-0 h-full w-6 lg:w-8 ${theme === 'night' ? 'bg-red-500/20' : 'bg-red-500/10'} border-l-2 lg:border-l-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]`}>
                 <span className="text-red-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.red} Goal</span>
               </div>
-              <div className={`absolute top-0 left-0 h-full w-6 lg:w-8 ${theme === 'night' ? 'bg-red-500/20' : 'bg-red-500/10'} border-r-2 lg:border-r-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]`}>
+              <div key="goal-indicator-left" className={`absolute top-0 left-0 h-full w-6 lg:w-8 ${theme === 'night' ? 'bg-red-500/20' : 'bg-red-500/10'} border-r-2 lg:border-r-4 border-red-500/30 flex items-center justify-center [writing-mode:vertical-rl]`}>
                 <span className="text-red-600 font-black text-[8px] lg:text-xs tracking-[0.3em] lg:tracking-[0.5em] uppercase">{teamNames.red} Goal</span>
               </div>
             </div>
