@@ -8,10 +8,16 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
   Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX,
-  X, Settings, Copy, HelpCircle, Share2, Upload, Save, Download, Maximize2
+  X, Settings, Copy, HelpCircle, Share2, Upload, Save, Download, Maximize2,
+  UserCircle
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import confetti from 'canvas-confetti';
+
+import HamoodiAvatar from "./components/HamoodiAvatar";
+import CharacterCreator from "./components/CharacterCreator";
+import NarrativeOverlay from "./components/NarrativeOverlay";
+import { HamoodiCustomization, NarrativeChoice, NARRATIVE_STORY } from "./gameData";
 
 /* ─────────────────────────────────────────────────────────
    CONSTANTS & DATA
@@ -2575,67 +2581,38 @@ const HAMOODI_MESSAGES = {
   LETTER_L: "حرف اللام، لمعان وجمال! حرف مميز لمن يستحقه.",
 };
 
-const Hamoodi = ({ mood, name, message }: { mood: HamoodiMood, name: string, message?: string | null }) => {
+const Hamoodi = ({ mood, name, message, customization }: { mood: HamoodiMood, name: string, message?: string | null, customization: HamoodiCustomization }) => {
   const getHamoodiContent = () => {
     switch (mood) {
       case 'happy':
         return {
-          emoji: '😊',
           message: `أهلاً بك يا ${name}! أنا سعيد جداً اليوم!`,
           color: 'bg-green-100',
           borderColor: 'border-green-500',
-          animation: {
-            y: [0, -10, 0],
-            rotate: [0, 5, -5, 0],
-            transition: { repeat: Infinity, duration: 2 }
-          }
         };
       case 'excited':
         return {
-          emoji: '🤩',
           message: `يا للروعة يا ${name}! أنت تبلي بلاءً حسناً!`,
           color: 'bg-yellow-100',
           borderColor: 'border-yellow-500',
-          animation: {
-            scale: [1, 1.1, 1],
-            rotate: [0, 10, -10, 0],
-            y: [0, -15, 0],
-            transition: { repeat: Infinity, duration: 0.5 }
-          }
         };
       case 'sleepy':
         return {
-          emoji: '😴',
           message: `يا إلهي يا ${name}... أشعر بالنعاس قليلاً...`,
           color: 'bg-blue-100',
           borderColor: 'border-blue-500',
-          animation: {
-            opacity: [0.6, 1, 0.6],
-            scale: [0.95, 1, 0.95],
-            transition: { repeat: Infinity, duration: 3 }
-          }
         };
       case 'sad':
         return {
-          emoji: '😢',
           message: `أوه لا يا ${name}... حظاً أوفر في المرة القادمة!`,
           color: 'bg-red-100',
           borderColor: 'border-red-500',
-          animation: {
-            x: [-2, 2, -2],
-            transition: { repeat: Infinity, duration: 0.2 }
-          }
         };
       default:
         return {
-          emoji: '😐',
           message: `كيف حالك يا ${name}؟ لنبدأ اللعب!`,
           color: 'bg-gray-100',
           borderColor: 'border-gray-500',
-          animation: {
-            y: [0, -2, 0],
-            transition: { repeat: Infinity, duration: 4 }
-          }
         };
     }
   };
@@ -2661,12 +2638,9 @@ const Hamoodi = ({ mood, name, message }: { mood: HamoodiMood, name: string, mes
         }}
         transition={{ duration: 1, repeat: Infinity }}
       />
-      <motion.span 
-        animate={content.animation}
-        className="text-3xl z-10"
-      >
-        {content.emoji}
-      </motion.span>
+      <div className="z-10">
+        <HamoodiAvatar mood={mood} customization={customization} size={60} />
+      </div>
       <div className="flex flex-col z-10">
         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Hamoodi</span>
         <p className="text-[10px] lg:text-xs font-bold text-[#1A1A1A] leading-tight">{displayMessage}</p>
@@ -2679,6 +2653,54 @@ export default function App() {
   const [screen, setScreen] = useState<'auth' | 'lobby' | 'bank-selection' | 'game'>('auth');
   const [playerName, setPlayerName] = useState('');
   const [hamoodiMood, setHamoodiMood] = useState<HamoodiMood>('neutral');
+  const [customization, setCustomization] = useState<HamoodiCustomization>(() => {
+    const saved = localStorage.getItem('hamoodi_customization');
+    return saved ? JSON.parse(saved) : {
+      clothing: 'none',
+      accessory: 'none',
+      headwear: 'none',
+      personality: 'friendly'
+    };
+  });
+  const [isCreatorOpen, setIsCreatorOpen] = useState(false);
+  const [narrativeNodeId, setNarrativeNodeId] = useState<string | null>(null);
+  const [isNarrativeOpen, setIsNarrativeOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('hamoodi_customization', JSON.stringify(customization));
+  }, [customization]);
+
+  const handleNarrativeChoice = (choice: NarrativeChoice) => {
+    playSound(SOUNDS.CLICK);
+    if (choice.mood) updateHamoodiMood(choice.mood);
+    
+    if (choice.bonus) {
+      if (choice.bonus.type === 'points') {
+        // Points bonus handled by host
+        if (isHost) {
+          // Add points to a team or just log it
+          console.log(`Bonus: ${choice.bonus.value} points`);
+        }
+      } else if (choice.bonus.type === 'time') {
+        setTimeLeft(prev => prev + choice.bonus!.value);
+      }
+    }
+
+    if (choice.nextId === 'game_start') {
+      setIsNarrativeOpen(false);
+      setNarrativeNodeId(null);
+      if (isHost) broadcastState({ isNarrativeOpen: false, narrativeNodeId: null });
+    } else {
+      setNarrativeNodeId(choice.nextId);
+      if (isHost) broadcastState({ narrativeNodeId: choice.nextId });
+    }
+  };
+
+  const startNarrative = () => {
+    setNarrativeNodeId('start');
+    setIsNarrativeOpen(true);
+    if (isHost) broadcastState({ isNarrativeOpen: true, narrativeNodeId: 'start' });
+  };
   const [isSmartHost, setIsSmartHost] = useState(false);
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
 
@@ -2893,7 +2915,41 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hroof_banks', JSON.stringify(banks));
   }, [banks]);
-  const [selectedBankName, setSelectedBankName] = useState("الأسئلة الافتراضية");
+  const [selectedBankNames, setSelectedBankNames] = useState<string[]>(["الأسئلة الافتراضية"]);
+
+  const updateQuestionsFromBanks = (bankNames: string[]) => {
+    const merged: Record<string, { q: string; a: string }[]> = {};
+    bankNames.forEach(name => {
+      const bankData = banks[name];
+      if (!bankData) return;
+      Object.entries(bankData).forEach(([letter, qs]) => {
+        const existing = merged[letter] || [];
+        merged[letter] = [...existing, ...(qs as { q: string; a: string }[])];
+      });
+    });
+    setQuestions(merged);
+    broadcastState({ questions: merged });
+  };
+
+  const toggleBank = (name: string) => {
+    let nextSelected;
+    if (selectedBankNames.includes(name)) {
+      nextSelected = selectedBankNames.filter(n => n !== name);
+    } else {
+      nextSelected = [...selectedBankNames, name];
+    }
+    if (nextSelected.length === 0) nextSelected = ["الأسئلة الافتراضية"];
+    setSelectedBankNames(nextSelected);
+    updateQuestionsFromBanks(nextSelected);
+    playSound(SOUNDS.CLICK);
+  };
+
+  const selectAllBanks = () => {
+    const allNames = Object.keys(banks);
+    setSelectedBankNames(allNames);
+    updateQuestionsFromBanks(allNames);
+    playSound(SOUNDS.SUCCESS);
+  };
 
   // Timer state
   const [timeLeft, setTimeLeft] = useState(30);
@@ -2907,8 +2963,8 @@ export default function App() {
   const [uploadSummary, setUploadSummary] = useState<{ count: number; letters: string[] } | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   useEffect(() => {
-    if (isEditorOpen) setEditorBankName(selectedBankName);
-  }, [isEditorOpen, selectedBankName]);
+    if (isEditorOpen && selectedBankNames.length > 0) setEditorBankName(selectedBankNames[0]);
+  }, [isEditorOpen, selectedBankNames]);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -2941,28 +2997,43 @@ export default function App() {
 
   // Auto-sync editor changes to local banks collection
   useEffect(() => {
-    if (isEditorOpen && selectedBankName && selectedBankName !== "الأسئلة الافتراضية") {
-      setBanks(prev => ({ ...prev, [selectedBankName]: questions }));
+    if (isEditorOpen && selectedBankNames.length > 0 && selectedBankNames[0] !== "الأسئلة الافتراضية") {
+      setBanks(prev => ({ ...prev, [selectedBankNames[0]]: questions }));
     }
-  }, [questions, isEditorOpen, selectedBankName]);
+  }, [questions, isEditorOpen, selectedBankNames]);
 
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [editingLetter, setEditingLetter] = useState<string | null>(null);
-  const [editorBankName, setEditorBankName] = useState(selectedBankName);
+  const [editorBankName, setEditorBankName] = useState(selectedBankNames[0] || "الأسئلة الافتراضية");
   const [newQ, setNewQ] = useState("");
 
   // Load game progress
   useEffect(() => {
     const saved = localStorage.getItem('hroof_progress');
+    const savedUser = localStorage.getItem('hroof_user');
     if (saved) {
       try {
         const data = JSON.parse(saved);
         if (data.tiles) setTiles(data.tiles);
         if (data.letters) setLetters(data.letters);
         if (data.scores) setScores(data.scores);
-        if (data.selectedIdx !== undefined) setSelectedIdx(data.selectedIdx);
-        if (data.screen) setScreen(data.screen);
+        
+        // Always reset selection on mount to prevent getting stuck
+        setSelectedIdx(-1);
+        setIsLetterExpanded(false);
+
+        // Auth Guard: Always redirect to lobby if game screen was saved, 
+        // as we need to be in a room to play properly.
+        if (data.screen) {
+          if (data.screen === 'game') {
+            setScreen(savedUser ? 'lobby' : 'auth');
+          } else if (!savedUser && data.screen !== 'auth') {
+            setScreen('auth');
+          } else {
+            setScreen(data.screen);
+          }
+        }
         if (data.teams) setTeams(data.teams);
         if (data.playerStats) setPlayerStats(data.playerStats);
         if (data.usedQuestions) setUsedQuestions(data.usedQuestions);
@@ -2976,6 +3047,16 @@ export default function App() {
       }
     }
   }, []);
+
+  const emergencyReset = () => {
+    if (window.confirm('هل أنت متأكد من رغبتك في مسح جميع البيانات وإعادة تشغيل اللعبة؟')) {
+      localStorage.removeItem('hroof_progress');
+      localStorage.removeItem('hroof_user');
+      localStorage.removeItem('hroof_progress_backup');
+      localStorage.removeItem('saved_game_config');
+      window.location.reload();
+    }
+  };
 
   // Save game progress
   useEffect(() => {
@@ -3035,9 +3116,11 @@ export default function App() {
     const updated = { ...banks };
     delete updated[name];
     setBanks(updated);
-    if (selectedBankName === name) {
-      setSelectedBankName('الأسئلة الافتراضية');
-      setQuestions(FALLBACK_QUESTIONS);
+    if (selectedBankNames.includes(name)) {
+      const next = selectedBankNames.filter(n => n !== name);
+      const final = next.length === 0 ? ["الأسئلة الافتراضية"] : next;
+      setSelectedBankNames(final);
+      updateQuestionsFromBanks(final);
     }
     if (user) {
       await fetch(`/api/banks/${user.id}/${name}`, { method: 'DELETE' });
@@ -3177,6 +3260,8 @@ export default function App() {
       if (state.showPlayerSelector !== undefined) setShowPlayerSelector(state.showPlayerSelector);
       if (state.hamoodiMessage !== undefined) setHamoodiMessage(state.hamoodiMessage);
       if (state.hamoodiMood) setHamoodiMood(state.hamoodiMood);
+      if (state.narrativeNodeId !== undefined) setNarrativeNodeId(state.narrativeNodeId);
+      if (state.isNarrativeOpen !== undefined) setIsNarrativeOpen(state.isNarrativeOpen);
     });
 
     newSocket.on("player-list", (players) => {
@@ -3518,6 +3603,7 @@ export default function App() {
       tiles: Array(25).fill('neutral'),
       letters: shuffled,
       winner: null,
+      gameWinner: null,
       selectedIdx: -1,
       timeLeft: timerDuration,
       timerRunning: false,
@@ -3530,6 +3616,7 @@ export default function App() {
     setTiles(newState.tiles);
     setLetters(newState.letters);
     setWinner(null);
+    setGameWinner(null);
     setSelectedIdx(-1);
     setTimeLeft(timerDuration);
     setTimerRunning(false);
@@ -3548,11 +3635,11 @@ export default function App() {
       tiles: Array(25).fill('neutral'),
       letters: shuffled,
       winner: null,
+      gameWinner: null,
       selectedIdx: -1,
       timeLeft: timerDuration,
       timerRunning: false,
       scores: { red: 0, green: 0 },
-      gameWinner: null,
       usedQuestions: {},
       qIdx: 0,
       showAnswer: false,
@@ -3564,8 +3651,8 @@ export default function App() {
     setTiles(newState.tiles);
     setLetters(newState.letters);
     setWinner(null);
-    setScores(newState.scores);
     setGameWinner(null);
+    setScores(newState.scores);
     setSelectedIdx(-1);
     setTimeLeft(timerDuration);
     setTimerRunning(false);
@@ -3583,6 +3670,7 @@ export default function App() {
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     setRoomCode(code);
     setIsHost(true);
+    setScores({ red: 0, green: 0 }); // Reset scores for new room
     socket?.emit("create-room", { roomCode: code, playerName });
     playSound(SOUNDS.SUCCESS);
     setScreen('bank-selection');
@@ -3617,6 +3705,7 @@ export default function App() {
     });
     setScreen('game');
     setMatchLog([]);
+    startNarrative();
     playSound(SOUNDS.NEW_GAME);
     triggerHamoodiMessage(HAMOODI_MESSAGES.START);
   };
@@ -3670,7 +3759,7 @@ export default function App() {
         if (count > 0) {
           const bankName = file.name.split('.')[0] || `بنك ${Object.keys(banks).length + 1}`;
           setBanks(prev => ({ ...prev, [bankName]: parsed }));
-          setSelectedBankName(bankName);
+          setSelectedBankNames([bankName]);
           setQuestions(parsed);
           setUploadSummary({ count, letters: Object.keys(parsed) });
           broadcastState({ questions: parsed });
@@ -3765,26 +3854,33 @@ export default function App() {
             <div className="grid grid-cols-1 landscape:grid-cols-3 lg:grid-cols-3 gap-1 lg:gap-6 flex-1 overflow-hidden">
               {/* Column 1: Banks */}
               <div className="flex flex-col gap-0.5 lg:gap-3 overflow-hidden">
-                <h2 className="text-[10px] lg:text-lg font-black flex items-center gap-1 lg:gap-2"><Music size={12} /> بنوك الأسئلة</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[10px] lg:text-lg font-black flex items-center gap-1 lg:gap-2"><Music size={12} /> بنوك الأسئلة</h2>
+                  <button 
+                    onClick={selectAllBanks}
+                    className="text-[8px] lg:text-xs bg-[#1A1A1A] text-white px-2 py-1 rounded-lg font-bold hover:bg-gray-800 transition-colors"
+                  >
+                    تحديد الكل
+                  </button>
+                </div>
                 <div className="flex-1 overflow-y-auto border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl p-1 lg:p-4 flex flex-col gap-1 bg-gray-50 custom-scrollbar">
                   {Object.keys(banks).map(name => {
                     const isPreset = name === "الأسئلة الافتراضية" || !!PRESET_BANKS[name];
+                    const isSelected = selectedBankNames.includes(name);
                     return (
                       <div key={name} className="relative group">
                         <button 
-                          onClick={() => {
-                            setSelectedBankName(name);
-                            setQuestions(banks[name]);
-                            broadcastState({ questions: banks[name] });
-                            playSound(SOUNDS.CLICK);
-                          }}
-                          className={`w-full p-1 lg:p-3 rounded-lg border-2 lg:border-4 border-[#1A1A1A] font-black text-right transition-all flex justify-between items-center ${selectedBankName === name ? 'bg-[#1A1A1A] text-white shadow-[2px_2px_0_#22C55E]' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
+                          onClick={() => toggleBank(name)}
+                          className={`w-full p-1 lg:p-3 rounded-lg border-2 lg:border-4 border-[#1A1A1A] font-black text-right transition-all flex justify-between items-center ${isSelected ? 'bg-[#1A1A1A] text-white shadow-[2px_2px_0_#22C55E]' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
                         >
                           <div className="flex items-center gap-1 truncate">
                             {isPreset && <span className="text-[6px] lg:text-[8px] bg-blue-500 text-white px-1 rounded">ثابت</span>}
                             <span className="text-[8px] lg:text-sm truncate">{name}</span>
                           </div>
-                          <span className="text-[7px] lg:text-xs opacity-60">{(Object.values(banks[name]) as any[]).reduce((a, b) => a + b.length, 0)}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[7px] lg:text-xs opacity-60">{(Object.values(banks[name]) as any[]).reduce((a, b) => a + b.length, 0)}</span>
+                            {isSelected && <div className="w-2 h-2 lg:w-3 lg:h-3 bg-[#22C55E] rounded-full border border-white" />}
+                          </div>
                         </button>
                         {!isPreset && (
                           <button 
@@ -4128,20 +4224,33 @@ export default function App() {
               >
                 الدخول كضيف 👤
               </button>
+
+              <button 
+                onClick={emergencyReset}
+                className="text-red-500 font-bold hover:underline text-[10px] lg:text-xs mt-4 opacity-50 hover:opacity-100 transition-opacity"
+              >
+                إعادة ضبط المصنع (في حال تعطل اللعبة) ⚠️
+              </button>
             </div>
           </motion.div>
         </div>
       )}
 
       {screen === 'lobby' && (
-        <div className="h-screen flex flex-col items-center justify-center gap-2 lg:gap-8 bg-[#F0F4E8] p-2 lg:p-4 overflow-hidden">
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-2 lg:gap-8 bg-[#F0F4E8] p-2 lg:p-4 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           <div className="bg-white border-4 border-[#1A1A1A] rounded-2xl lg:rounded-3xl p-4 lg:p-10 text-center shadow-[4px_4px_0_#1A1A1A] lg:shadow-[8px_8px_0_#1A1A1A] w-full max-w-[320px] lg:max-w-[400px]">
             <div className="mb-4">
-              <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} />
+              <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} customization={customization} />
             </div>
             <h2 className="text-[clamp(1rem,4vw,1.75rem)] font-black mb-3 lg:mb-6">مرحباً {playerName}</h2>
             
             <div className="flex flex-col gap-2 lg:gap-4">
+              <button 
+                onClick={() => { playSound(SOUNDS.CLICK); setIsCreatorOpen(true); }}
+                className="bg-yellow-400 text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
+              >
+                <UserCircle size={18} /> تخصيص حمودي
+              </button>
               <div className="text-right mb-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">تغيير اسمك</label>
                 <input 
@@ -4165,6 +4274,28 @@ export default function App() {
                 <span className="flex-shrink mx-4 text-gray-400 font-bold text-xs lg:text-sm">أو</span>
                 <div className="flex-grow border-t-2 border-[#1A1A1A]/10"></div>
               </div>
+
+              {localStorage.getItem('saved_game_config') && (
+                <button 
+                  onClick={() => {
+                    playSound(SOUNDS.CLICK);
+                    try {
+                      const config = JSON.parse(localStorage.getItem('saved_game_config') || '{}');
+                      setQuestions(config.questions || []);
+                      setTeams(config.teams || { red: [], green: [] });
+                      setTheme(config.theme || 'classic');
+                      setWinCondition(config.winCondition || 4);
+                      setTimerDuration(config.timerDuration || 30);
+                      alert('تم استعادة إعدادات اللعبة بنجاح! يمكنك الآن إنشاء غرفة جديدة بهذه الإعدادات.');
+                    } catch (e) {
+                      console.error('Failed to load game config', e);
+                    }
+                  }}
+                  className="bg-orange-400 text-white border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
+                >
+                  <Save size={18} /> استعادة الإعدادات المحفوظة
+                </button>
+              )}
 
               <div className="flex flex-col gap-2">
                 <input 
@@ -4198,7 +4329,7 @@ export default function App() {
       )}
 
       {screen === 'game' && (
-        <div className={`flex-1 flex flex-col lg:flex-row overflow-hidden ${currentTheme.bg} transition-colors duration-700 relative`}>
+        <div className={`flex-1 flex flex-col lg:flex-row overflow-hidden ${currentTheme.bg} transition-colors duration-700 relative min-h-[100dvh] pb-[env(safe-area-inset-bottom)]`}>
           {/* Sidebar Toggle Button (Desktop) */}
           <div className="hidden lg:block fixed top-4 right-4 z-50">
             <button 
@@ -4218,18 +4349,22 @@ export default function App() {
           />
 
       {/* Logo & Scoreboard (Fixed Top) */}
-      <div className={`fixed top-0 left-0 right-0 z-40 pointer-events-none flex ${isLandscape ? 'flex-row justify-between items-start px-4' : 'flex-col items-center'} p-2 lg:p-4 gap-2`}>
-        <motion.div 
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className={`bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl px-4 lg:px-8 py-1 lg:py-2 shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] pointer-events-auto ${isLandscape ? 'scale-75 origin-top-left' : ''}`}
-        >
-          <h1 className="text-[clamp(0.8rem,3vw,1.8rem)] font-black text-[#1A1A1A] tracking-tight whitespace-nowrap">Hroof With Hamoodi</h1>
-        </motion.div>
+      <div className={`fixed top-0 left-0 right-0 z-20 pointer-events-none flex ${isLandscape ? 'flex-row justify-between items-start px-4' : 'flex-col items-center'} p-2 lg:p-4 gap-2`}>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className={`bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl px-4 lg:px-8 py-1 lg:py-2 shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] ${isLandscape ? 'scale-75 origin-top-left' : ''}`}
+          >
+            <h1 className="text-[clamp(0.8rem,3vw,1.8rem)] font-black text-[#1A1A1A] tracking-tight whitespace-nowrap">Hroof With Hamoodi</h1>
+          </motion.div>
+
+          {/* Removed Save and Exit buttons from here */}
+        </div>
 
         {screen === 'game' && (
           <div key="hamoodi-container" className="pointer-events-auto scale-75 lg:scale-100 origin-top">
-            <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} />
+            <Hamoodi mood={hamoodiMood} name={playerName || 'لاعب'} message={hamoodiMessage} customization={customization} />
           </div>
         )}
 
@@ -4246,7 +4381,10 @@ export default function App() {
                   {[...Array(winCondition)].map((_, i) => (
                     <motion.div 
                       key={i} 
-                      animate={scores.red > i ? { scale: [1, 1.3, 1], backgroundColor: '#EF4444' } : {}}
+                      animate={{ 
+                        scale: scores.red > i ? [1, 1.3, 1] : 1, 
+                        backgroundColor: scores.red > i ? '#EF4444' : '#F3F4F6' 
+                      }}
                       className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full border-2 border-[#1A1A1A] ${scores.red > i ? 'bg-red-500' : 'bg-gray-100'}`} 
                     />
                   ))}
@@ -4265,7 +4403,10 @@ export default function App() {
                   {[...Array(winCondition)].map((_, i) => (
                     <motion.div 
                       key={i} 
-                      animate={scores.green > i ? { scale: [1, 1.3, 1], backgroundColor: '#22C55E' } : {}}
+                      animate={{ 
+                        scale: scores.green > i ? [1, 1.3, 1] : 1, 
+                        backgroundColor: scores.green > i ? '#22C55E' : '#F3F4F6' 
+                      }}
                       className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full border-2 border-[#1A1A1A] ${scores.green > i ? 'bg-green-500' : 'bg-gray-100'}`} 
                     />
                   ))}
@@ -4363,18 +4504,6 @@ export default function App() {
                                 className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform"
                               >
                                 سؤال آخر 🔄
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  if (currentQ) {
-                                    navigator.clipboard.writeText(currentQ.q);
-                                    playSound(SOUNDS.CLICK);
-                                  }
-                                }}
-                                className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform flex items-center gap-1"
-                                title="نسخ السؤال"
-                              >
-                                <Copy size={14} /> نسخ
                               </button>
                             </div>
                           </div>
@@ -4568,7 +4697,32 @@ export default function App() {
 
             <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }} className={`${currentTheme.board} border-4 border-[#1A1A1A] rounded-2xl p-3 shadow-[4px_4px_0_#1A1A1A] text-center`}>
               <p className={`text-[clamp(0.5rem,1.2vw,0.65rem)] font-black ${currentTheme.text} opacity-40 uppercase tracking-widest mb-1`}>Room Code</p>
-              <p className={`text-[clamp(1rem,3vw,1.5rem)] font-black tracking-widest ${currentTheme.text}`}>{roomCode}</p>
+              <div className="flex items-center justify-center gap-2">
+                <p className={`text-[clamp(1rem,3vw,1.5rem)] font-black tracking-widest ${currentTheme.text}`}>{roomCode}</p>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(roomCode);
+                    playSound(SOUNDS.SUCCESS);
+                    alert('تم نسخ كود الغرفة!');
+                  }}
+                  className="p-1 hover:bg-black/5 rounded-lg transition-colors"
+                  title="نسخ كود الغرفة"
+                >
+                  <Copy size={16} className={currentTheme.text} />
+                </button>
+                <button 
+                  onClick={() => {
+                    const url = `${window.location.origin}?room=${roomCode}`;
+                    navigator.clipboard.writeText(url);
+                    playSound(SOUNDS.SUCCESS);
+                    alert('تم نسخ رابط الغرفة!');
+                  }}
+                  className="p-1 hover:bg-black/5 rounded-lg transition-colors"
+                  title="نسخ رابط الغرفة"
+                >
+                  <Share2 size={16} className={currentTheme.text} />
+                </button>
+              </div>
             </motion.div>
 
             <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="flex flex-col gap-2 lg:gap-4">
@@ -4826,19 +4980,6 @@ export default function App() {
                       </div>
                       {currentQuestions.length > 0 && currentQ && (
                         <div className="flex flex-col gap-4">
-                          <div className="flex justify-end">
-                            <button 
-                              onClick={() => {
-                                if (currentQ) {
-                                  navigator.clipboard.writeText(currentQ.q);
-                                  playSound(SOUNDS.CLICK);
-                                }
-                              }}
-                              className="bg-white border-2 border-[#1A1A1A] rounded-xl px-4 py-2 text-xs font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-transform flex items-center gap-1"
-                            >
-                              <Copy size={14} /> نسخ السؤال
-                            </button>
-                          </div>
                           <motion.div 
                             key={qIdx}
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -5057,13 +5198,13 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+            className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lg:p-6 overflow-y-auto"
           >
             <Confetti />
             <motion.div 
               initial={{ scale: 0.5, rotate: -10 }}
               animate={{ scale: 1, rotate: 0 }}
-              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-12 text-center shadow-[12px_12px_0_#1A1A1A] max-w-md w-full relative overflow-hidden"
+              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-6 lg:p-12 text-center shadow-[12px_12px_0_#1A1A1A] max-w-md w-full relative overflow-hidden my-auto"
             >
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" />
               <div className="text-8xl mb-6">🏁</div>
@@ -5099,13 +5240,13 @@ export default function App() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 lg:p-6"
+            className="fixed inset-0 z-[160] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 lg:p-6 overflow-y-auto"
           >
             <Confetti />
             <motion.div 
               initial={{ scale: 0.5, y: 100 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white border-4 lg:border-8 border-[#1A1A1A] rounded-[24px] lg:rounded-[40px] p-6 lg:p-12 text-center shadow-[8px_8px_0_#1A1A1A] lg:shadow-[12px_12px_0_#1A1A1A] max-w-md w-full relative overflow-hidden"
+              className="bg-white border-4 lg:border-8 border-[#1A1A1A] rounded-[24px] lg:rounded-[40px] p-6 lg:p-12 text-center shadow-[8px_8px_0_#1A1A1A] lg:shadow-[12px_12px_0_#1A1A1A] max-w-md w-full relative overflow-hidden my-auto"
             >
               <div className="absolute top-0 left-0 w-full h-2 lg:h-4 bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 animate-pulse" />
               <div className="text-6xl lg:text-9xl mb-4 lg:mb-6">🏆</div>
@@ -5230,12 +5371,12 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lg:p-10"
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 lg:p-10 overflow-y-auto"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-6 lg:p-10 shadow-[12px_12px_0_#1A1A1A] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+              className="bg-white border-4 lg:border-8 border-[#1A1A1A] rounded-[24px] lg:rounded-[40px] p-4 lg:p-10 shadow-[8px_8px_0_#1A1A1A] lg:shadow-[12px_12px_0_#1A1A1A] w-full max-w-4xl max-h-[95dvh] lg:max-h-[90vh] overflow-hidden flex flex-col my-auto"
             >
               <div className="flex justify-between items-center mb-6">
                 <div className="flex flex-col gap-2">
@@ -5254,11 +5395,13 @@ export default function App() {
                         
                         // Update local banks
                         const updatedBanks = { ...banks, [editorBankName]: questions };
-                        if (editorBankName !== selectedBankName && selectedBankName !== "الأسئلة الافتراضية") {
-                          delete updatedBanks[selectedBankName];
+                        const currentBank = selectedBankNames[0] || "الأسئلة الافتراضية";
+                        if (editorBankName !== currentBank && currentBank !== "الأسئلة الافتراضية") {
+                          delete updatedBanks[currentBank];
                         }
                         setBanks(updatedBanks);
-                        setSelectedBankName(editorBankName);
+                        setSelectedBankNames([editorBankName]);
+                        updateQuestionsFromBanks([editorBankName]);
 
                         // Save to cloud if logged in
                         if (user) {
@@ -5269,8 +5412,8 @@ export default function App() {
                               body: JSON.stringify({ userId: user.id, name: editorBankName, data: questions })
                             });
                             // If renamed, delete old one from cloud
-                            if (editorBankName !== selectedBankName && selectedBankName !== "الأسئلة الافتراضية") {
-                              await fetch(`/api/banks/${user.id}/${selectedBankName}`, { method: 'DELETE' });
+                            if (editorBankName !== currentBank && currentBank !== "الأسئلة الافتراضية") {
+                              await fetch(`/api/banks/${user.id}/${currentBank}`, { method: 'DELETE' });
                             }
                             alert("تم الحفظ بنجاح! ✨");
                           } catch (err) {
@@ -5659,6 +5802,26 @@ export default function App() {
           )}
         </AnimatePresence>
       </AnimatePresence>
+      {/* Character Creator Modal */}
+      <CharacterCreator 
+        isOpen={isCreatorOpen} 
+        onClose={() => setIsCreatorOpen(false)} 
+        customization={customization}
+        onUpdate={setCustomization}
+      />
+
+      {/* Narrative Overlay */}
+      <NarrativeOverlay 
+        isOpen={isNarrativeOpen}
+        currentNodeId={narrativeNodeId || 'start'}
+        onChoice={handleNarrativeChoice}
+        onExit={() => {
+          setIsNarrativeOpen(false);
+          setScreen('lobby');
+          socket?.emit("leave-room", { roomCode });
+        }}
+        customization={customization}
+      />
     </div>
   );
 }
