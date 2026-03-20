@@ -9,7 +9,7 @@ import {
   Trophy, Play, Square, RotateCcw, FileUp, LogOut, ChevronLeft, 
   Eye, EyeOff, Users, Plus, LogIn, Trash2, Music, Volume2, VolumeX,
   X, Settings, Copy, HelpCircle, Share2, Upload, Save, Download, Maximize2,
-  UserCircle
+  UserCircle, ArrowRight, ArrowLeft
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import confetti from 'canvas-confetti';
@@ -23,11 +23,7 @@ import { HamoodiCustomization, NarrativeChoice, NARRATIVE_STORY } from "./gameDa
    CONSTANTS & DATA
 ───────────────────────────────────────────────────────── */
 const INITIAL_LETTERS = [
-  'ز', 'ن', 'ح', 'ع', 'ل',
-  'ب', 'ت', 'ي', 'ظ', 'ر',
-  'ط', 'ق', 'س', 'ث', 'ه',
-  'خ', 'ف', 'ا', 'و', 'ش',
-  'ذ', 'ك', 'ج', 'ص', 'م'
+  'ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'
 ];
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -37,6 +33,14 @@ function shuffleArray<T>(array: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function getEffectiveFirstLetter(str: string): string {
+  if (!str) return '';
+  // Remove "ال" or "الـ" or "ال " or "الـ " at the beginning
+  // The regex handles "الـ" before "ال" to ensure "الـ" is matched correctly
+  const cleaned = str.trim().replace(/^(الـ|ال)\s*/, '');
+  return (cleaned[0] || str.trim()[0] || '').toUpperCase();
 }
 
 const PRESET_BANKS: Record<string, Record<string, { q: string; a: string }[]>> = {
@@ -2355,7 +2359,7 @@ function parseTxt(text: string) {
       const answer = aMatch[1].trim();
       // Auto-categorize by first letter of answer if no curLetter
       // We prioritize curLetter if it was explicitly set in the file (e.g. "الحرف: أ")
-      const targetLetter = curLetter || answer[0]; 
+      const targetLetter = curLetter || getEffectiveFirstLetter(answer); 
       if (targetLetter) {
         const normalizedLetter = targetLetter.toUpperCase();
         if (!res[normalizedLetter]) res[normalizedLetter] = [];
@@ -2371,7 +2375,7 @@ function parseTxt(text: string) {
       if (parts.length >= 2 && parts[1].trim()) {
         const q = parts[0].trim() + (line.includes('؟') ? '؟' : '?');
         const a = parts[1].trim();
-        const targetLetter = curLetter || a[0];
+        const targetLetter = curLetter || getEffectiveFirstLetter(a);
         if (targetLetter) {
           if (!res[targetLetter]) res[targetLetter] = [];
           res[targetLetter].push({ q, a });
@@ -2499,8 +2503,9 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 
       <polygon 
         points={pts} 
         fill={colors.fill} 
-        stroke={isSelected ? '#1A1A1A' : colors.stroke} 
-        strokeWidth={isSelected ? 5 * cellSize : 2.5 * cellSize} 
+        stroke={isSelected ? '#1A1A1A' : (isUsed && state === 'neutral' ? '#F97316' : colors.stroke)} 
+        strokeWidth={isSelected ? 5 * cellSize : (isUsed && state === 'neutral' ? 3.5 * cellSize : 2.5 * cellSize)} 
+        strokeDasharray={isUsed && state === 'neutral' ? `${5 * cellSize},${3 * cellSize}` : 'none'}
         className="transition-all duration-300"
       />
       {isSelected && (
@@ -2534,7 +2539,7 @@ const Hexagon = ({ state, letter, isSelected, onClick, fontSize = 1, cellSize = 
             </span>
             {isUsed && state === 'neutral' && (
               <div 
-                className="absolute -top-1 -right-1 w-2 h-2 lg:w-3 lg:h-3 bg-blue-500 rounded-full border border-white shadow-sm"
+                className="absolute -top-2 -right-2 w-3 h-3 lg:w-4 lg:h-4 bg-orange-500 rounded-full border-2 border-white shadow-md animate-pulse"
                 title="تم استخدام هذا الحرف"
               />
             )}
@@ -2761,20 +2766,23 @@ export default function App() {
   const [tiles, setTiles] = useState<string[]>(Array(25).fill('neutral'));
   const [letters, setLetters] = useState<string[]>(INITIAL_LETTERS);
   const [selectedIdx, setSelectedIdx] = useState<number>(-1);
-  const [questions, setQuestions] = useState(() => {
-    const initialBanks = { "الأسئلة الافتراضية": FALLBACK_QUESTIONS, ...PRESET_BANKS };
-    const bankNames = ["الأسئلة الافتراضية", "البنك الشخصي السهل 🌟"];
-    const merged: Record<string, { q: string; a: string }[]> = {};
-    bankNames.forEach(name => {
-      const bankData = initialBanks[name as keyof typeof initialBanks];
-      if (!bankData) return;
-      Object.entries(bankData).forEach(([letter, qs]) => {
-        const existing = merged[letter] || [];
-        merged[letter] = [...existing, ...(qs as { q: string; a: string }[])];
-      });
-    });
-    return merged;
+  const [questions, setQuestions] = useState<Record<string, { q: string; a: string }[]>>({});
+  const [selectedBankNames, setSelectedBankNames] = useState<string[]>(() => {
+    const saved = localStorage.getItem('hroof_selected_banks');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return ["الأسئلة الافتراضية", "البنك الشخصي السهل 🌟"];
+      }
+    }
+    return ["الأسئلة الافتراضية", "البنك الشخصي السهل 🌟"];
   });
+
+  useEffect(() => {
+    localStorage.setItem('hroof_selected_banks', JSON.stringify(selectedBankNames));
+  }, [selectedBankNames]);
+
   const [usedQuestions, setUsedQuestions] = useState<Record<string, number[]>>({});
   const [winner, setWinner] = useState<'red' | 'green' | null>(null);
   const [scores, setScores] = useState({ red: 0, green: 0 });
@@ -2938,7 +2946,7 @@ export default function App() {
       }
     }
   }, [customSounds, bgMusicEnabled, bgMusicAudio]);
-  
+
   // Banks Management
   const [banks, setBanks] = useState<Record<string, Record<string, { q: string; a: string }[]>>>(() => {
     const saved = localStorage.getItem('hroof_banks');
@@ -2955,10 +2963,14 @@ export default function App() {
     return initialBanks;
   });
 
+  // Initialize questions from selected banks on mount
+  useEffect(() => {
+    updateQuestionsFromBanks(selectedBankNames);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('hroof_banks', JSON.stringify(banks));
   }, [banks]);
-  const [selectedBankNames, setSelectedBankNames] = useState<string[]>(["الأسئلة الافتراضية", "البنك الشخصي السهل 🌟"]);
 
   const updateQuestionsFromBanks = (bankNames: string[]) => {
     const merged: Record<string, { q: string; a: string }[]> = {};
@@ -2987,6 +2999,28 @@ export default function App() {
     playSound(SOUNDS.CLICK);
   };
 
+  const createNewBank = () => {
+    if (!newBankNameInput.trim()) return;
+    const name = newBankNameInput.trim();
+    if (banks[name]) return alert("هذا الاسم موجود بالفعل!");
+    
+    const emptyBank: Record<string, { q: string; a: string }[]> = {};
+    INITIAL_LETTERS.forEach(l => {
+      emptyBank[l] = [];
+    });
+    
+    const updatedBanks = { ...banks, [name]: emptyBank };
+    setBanks(updatedBanks);
+    setSelectedBankNames([name]);
+    setQuestions(emptyBank);
+    broadcastState({ questions: emptyBank });
+    setEditorBankName(name);
+    setIsEditorOpen(true);
+    setIsNewBankModalOpen(false);
+    setNewBankNameInput("");
+    playSound(SOUNDS.SUCCESS);
+  };
+
   const selectAllBanks = () => {
     const allNames = Object.keys(banks);
     setSelectedBankNames(allNames);
@@ -3005,9 +3039,30 @@ export default function App() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [uploadSummary, setUploadSummary] = useState<{ count: number; letters: string[] } | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isNewBankModalOpen, setIsNewBankModalOpen] = useState(false);
+  const [newBankNameInput, setNewBankNameInput] = useState("");
   useEffect(() => {
     if (isEditorOpen && selectedBankNames.length > 0) setEditorBankName(selectedBankNames[0]);
   }, [isEditorOpen, selectedBankNames]);
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (screen === 'bank-selection') {
+        setScreen('lobby');
+        // Prevent actual back navigation if we're just switching screens
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    if (screen === 'bank-selection') {
+      window.history.pushState(null, '', window.location.href);
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [screen]);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -3221,7 +3276,7 @@ export default function App() {
       const aMatch = line.match(/^(?:ج|جواب|إجابة|الإجابة|A|Answer)\s*[:\-]\s*(.*)$/i);
       if (aMatch && currentQ) {
         const answer = aMatch[1].trim();
-        const targetLetter = (curLetterInText || (!forceAutoDistribute ? editingLetter : null) || answer[0])?.toUpperCase();
+        const targetLetter = (curLetterInText || (!forceAutoDistribute ? editingLetter : null) || getEffectiveFirstLetter(answer))?.toUpperCase();
         if (targetLetter) {
           addIfUnique(targetLetter, currentQ, answer);
         }
@@ -3233,7 +3288,7 @@ export default function App() {
         currentQ = line;
       } else if (currentQ) {
         const answer = line;
-        const targetLetter = (curLetterInText || (!forceAutoDistribute ? editingLetter : null) || answer[0])?.toUpperCase();
+        const targetLetter = (curLetterInText || (!forceAutoDistribute ? editingLetter : null) || getEffectiveFirstLetter(answer))?.toUpperCase();
         if (targetLetter) {
           addIfUnique(targetLetter, currentQ, answer);
         }
@@ -3732,7 +3787,16 @@ export default function App() {
     if (teams.red.length === 0 || teams.green.length === 0) {
       return alert("يرجى إضافة لاعب واحد على الأقل لكل فريق");
     }
-    const shuffled = shuffleArray(INITIAL_LETTERS);
+
+    // If game already started (tiles not all neutral), just go back to game screen
+    if (tiles.some(t => t !== 'neutral')) {
+      setScreen('game');
+      broadcastState({ screen: 'game' });
+      playSound(SOUNDS.CLICK);
+      return;
+    }
+
+    const shuffled = shuffleArray(INITIAL_LETTERS).slice(0, 25);
     setLetters(shuffled);
     broadcastState({ 
       letters: shuffled, 
@@ -3889,9 +3953,19 @@ export default function App() {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-4xl bg-white border-4 lg:border-8 border-[#1A1A1A] rounded-[24px] lg:rounded-[40px] p-2 lg:p-10 shadow-[8px_8px_0_#1A1A1A] lg:shadow-[16px_16px_0_#1A1A1A] relative z-10 flex flex-col gap-1 lg:gap-6 max-h-[95vh] overflow-y-auto"
           >
-            <div className="text-center">
-              <h1 className="text-base lg:text-4xl font-black text-[#1A1A1A] mb-0 lg:mb-1">إعدادات الغرفة ⚙️</h1>
-              <p className="text-[8px] lg:text-base text-gray-500 font-bold">جهز لعبتك ووزع اللاعبين</p>
+            <div className="flex items-center justify-between mb-2 lg:mb-4">
+              <button 
+                onClick={() => { playSound(SOUNDS.CLICK); setScreen('lobby'); }}
+                className="bg-white border-2 lg:border-4 border-[#1A1A1A] rounded-xl px-2 lg:px-4 py-1 lg:py-2 font-black shadow-[2px_2px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-all flex items-center gap-1 text-[10px] lg:text-base"
+              >
+                <ArrowRight size={16} />
+                رجوع
+              </button>
+              <div className="text-center flex-1">
+                <h1 className="text-base lg:text-4xl font-black text-[#1A1A1A] mb-0 lg:mb-1">إعدادات الغرفة ⚙️</h1>
+                <p className="text-[8px] lg:text-base text-gray-500 font-bold">جهز لعبتك ووزع اللاعبين</p>
+              </div>
+              <div className="w-[60px] lg:w-[100px]" /> {/* Spacer for balance */}
             </div>
 
             <div className="grid grid-cols-1 landscape:grid-cols-3 lg:grid-cols-3 gap-1 lg:gap-6 flex-1 overflow-hidden">
@@ -3899,12 +3973,20 @@ export default function App() {
               <div className="flex flex-col gap-0.5 lg:gap-3 overflow-hidden">
                 <div className="flex items-center justify-between">
                   <h2 className="text-[10px] lg:text-lg font-black flex items-center gap-1 lg:gap-2"><Music size={12} /> بنوك الأسئلة</h2>
-                  <button 
-                    onClick={selectAllBanks}
-                    className="text-[8px] lg:text-xs bg-[#1A1A1A] text-white px-2 py-1 rounded-lg font-bold hover:bg-gray-800 transition-colors"
-                  >
-                    تحديد الكل
-                  </button>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => { playSound(SOUNDS.CLICK); setIsNewBankModalOpen(true); }}
+                      className="text-[8px] lg:text-xs bg-green-600 text-white px-2 py-1 rounded-lg font-bold hover:bg-green-700 transition-colors flex items-center gap-1"
+                    >
+                      <Plus size={10} /> جديد
+                    </button>
+                    <button 
+                      onClick={selectAllBanks}
+                      className="text-[8px] lg:text-xs bg-[#1A1A1A] text-white px-2 py-1 rounded-lg font-bold hover:bg-gray-800 transition-colors"
+                    >
+                      تحديد الكل
+                    </button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl p-1 lg:p-4 flex flex-col gap-1 bg-gray-50 custom-scrollbar">
                   {Object.keys(banks).map(name => {
@@ -4184,9 +4266,9 @@ export default function App() {
             <div className="flex gap-2 lg:gap-4 mt-1 lg:mt-4">
               <button 
                 onClick={() => { playSound(SOUNDS.CLICK); startGame(); }}
-                className="flex-[2] bg-[#22C55E] text-white border-4 lg:border-8 border-[#1A1A1A] rounded-xl lg:rounded-3xl py-2 lg:py-4 text-sm lg:text-2xl font-black shadow-[4px_4px_0_#166534] lg:shadow-[8px_8px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform"
+                className="flex-[2] bg-gradient-to-br from-[#22C55E] via-[#22C55E] to-[#16A34A] text-white border-[6px] lg:border-[12px] border-[#1A1A1A] rounded-xl lg:rounded-3xl py-2 lg:py-4 text-sm lg:text-2xl font-black shadow-[4px_4px_0_#166534] lg:shadow-[8px_8px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform"
               >
-                ابدأ اللعبة 🎮
+                {tiles.some(t => t !== 'neutral') ? 'إكمال اللعب 🎮' : 'ابدأ اللعبة 🎮'}
               </button>
               <button 
                 onClick={() => { playSound(SOUNDS.CLICK); setScreen('lobby'); }}
@@ -4355,6 +4437,13 @@ export default function App() {
                 >
                   <LogIn size={18} /> انضمام للغرفة
                 </button>
+
+                <button 
+                  onClick={() => { playSound(SOUNDS.CLICK); setScreen('auth'); }}
+                  className="mt-4 text-gray-400 font-bold hover:text-red-500 transition-colors flex items-center justify-center gap-2 text-xs lg:text-sm"
+                >
+                  <LogOut size={14} /> تسجيل الخروج / العودة للرئيسية
+                </button>
                 
                 <button 
                   onClick={() => {
@@ -4365,6 +4454,13 @@ export default function App() {
                   className="bg-[#A855F7] text-white border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
                 >
                   <Share2 size={18} /> مشاركة الرابط
+                </button>
+
+                <button 
+                  onClick={() => { playSound(SOUNDS.CLICK); setScreen('auth'); }}
+                  className="bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl py-2 lg:py-4 text-[clamp(0.8rem,3vw,1.25rem)] font-black shadow-[2px_2px_0_#1A1A1A] lg:shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 lg:gap-3 hover:translate-y-[-2px] active:translate-y-[2px] transition-transform font-arabic"
+                >
+                  <ArrowRight size={18} /> خروج للقائمة الرئيسية
                 </button>
               </div>
             </div>
@@ -4783,7 +4879,7 @@ export default function App() {
               >
                 <Volume2 size={16} /> تخصيص الأصوات 🔊
               </button>
-              <button onClick={() => { playSound(SOUNDS.CLICK); setScreen('bank-selection'); }} className="w-full bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><Users size={16} /> اختيار بنك آخر</button>
+              <button onClick={() => { playSound(SOUNDS.CLICK); setScreen('bank-selection'); }} className="w-full bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-2 lg:py-3 font-bold shadow-[4px_4px_0_#1A1A1A] flex items-center justify-center gap-2 hover:scale-105 active:scale-95 text-[clamp(0.7rem,1.8vw,0.9rem)]"><Settings size={16} /> دخول إعدادات الغرفة</button>
               
               <button 
                 onClick={() => {
@@ -5654,6 +5750,49 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {isNewBankModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white border-8 border-[#1A1A1A] rounded-[40px] p-10 shadow-[16px_16px_0_#1A1A1A] w-full max-w-md flex flex-col gap-6"
+            >
+              <h2 className="text-3xl font-black text-center">إنشاء بنك جديد ✨</h2>
+              <div className="space-y-2">
+                <label className="font-black text-gray-500 text-sm">اسم البنك</label>
+                <input 
+                  type="text" 
+                  autoFocus
+                  value={newBankNameInput}
+                  onChange={(e) => setNewBankNameInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && createNewBank()}
+                  placeholder="مثلاً: أسئلة العلوم..."
+                  className="w-full border-4 border-[#1A1A1A] rounded-2xl px-6 py-4 outline-none text-xl font-bold focus:ring-4 ring-blue-500/20"
+                />
+              </div>
+              <div className="flex gap-4">
+                <button 
+                  onClick={createNewBank}
+                  className="flex-1 bg-[#22C55E] text-white border-4 border-[#1A1A1A] rounded-2xl py-4 font-black text-xl shadow-[4px_4px_0_#166534] hover:scale-105 active:scale-95 transition-transform"
+                >
+                  إنشاء ✅
+                </button>
+                <button 
+                  onClick={() => { setIsNewBankModalOpen(false); setNewBankNameInput(""); }}
+                  className="flex-1 bg-white text-[#1A1A1A] border-4 border-[#1A1A1A] rounded-2xl py-4 font-black text-xl shadow-[4px_4px_0_#1A1A1A] hover:scale-105 active:scale-95 transition-transform"
+                >
+                  إلغاء
+                </button>
               </div>
             </motion.div>
           </motion.div>

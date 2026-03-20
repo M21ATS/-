@@ -60,6 +60,26 @@ const HamoodiAvatar: React.FC<Props> = ({ mood, customization, size = 100 }) => 
             <rect x="65" y="82" width="10" height="8" fill="#374151" stroke="#1A1A1A" strokeWidth="1" rx="2" />
           </g>
         );
+      case 'thobe':
+        return (
+          <g clipPath="url(#faceClip)">
+            {/* Thobe Base */}
+            <rect x="15" y="70" width="70" height="30" fill="#FFFFFF" />
+            {/* Collar Detail */}
+            <path d="M40 70 L50 78 L60 70" fill="none" stroke="#E5E7EB" strokeWidth="1" />
+            <circle cx="50" cy="85" r="1" fill="#E5E7EB" />
+          </g>
+        );
+      case 'superhero':
+        return (
+          <g clipPath="url(#faceClip)">
+            {/* Suit */}
+            <rect x="15" y="70" width="70" height="30" fill="#EF4444" />
+            {/* Logo */}
+            <path d="M50 75 L58 83 L50 91 L42 83 Z" fill="#FACC15" stroke="#1A1A1A" strokeWidth="1" />
+            <text x="50" y="85" fontSize="6" fontWeight="black" textAnchor="middle" fill="#1A1A1A" dy=".3em">H</text>
+          </g>
+        );
       default:
         return null;
     }
@@ -76,6 +96,25 @@ const HamoodiAvatar: React.FC<Props> = ({ mood, customization, size = 100 }) => 
             <path d="M25 30 L25 15 Q25 10 35 10 L65 10 Q75 10 75 15 L75 30" fill="#1A1A1A" stroke="#1A1A1A" strokeWidth="1" />
             {/* Hat Band */}
             <rect x="25" y="22" width="50" height="4" fill="#EF4444" />
+          </g>
+        );
+      case 'ghutra':
+        return (
+          <g>
+            {/* Ghutra Base */}
+            <path d="M20 35 Q50 15 80 35 L85 70 Q50 80 15 70 Z" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
+            {/* Igal */}
+            <path d="M30 35 Q50 30 70 35" fill="none" stroke="#1A1A1A" strokeWidth="4" strokeLinecap="round" />
+            <path d="M32 38 Q50 33 68 38" fill="none" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        );
+      case 'crown':
+        return (
+          <g>
+            <path d="M25 35 L20 15 L35 25 L50 10 L65 25 L80 15 L75 35 Z" fill="#FACC15" stroke="#1A1A1A" strokeWidth="2" />
+            <circle cx="50" cy="25" r="2" fill="#EF4444" />
+            <circle cx="35" cy="30" r="1.5" fill="#3B82F6" />
+            <circle cx="65" cy="30" r="1.5" fill="#3B82F6" />
           </g>
         );
       default:
@@ -99,6 +138,26 @@ const HamoodiAvatar: React.FC<Props> = ({ mood, customization, size = 100 }) => 
             {/* Reflection */}
             <path d="M36 50 L40 46" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
             <path d="M56 50 L60 46" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+          </g>
+        );
+      case 'mask':
+        return (
+          <g>
+            <path d="M25 45 Q50 40 75 45 L75 65 Q50 70 25 65 Z" fill="#1A1A1A" />
+            <circle cx="40" cy="55" r="6" fill="white" />
+            <circle cx="60" cy="55" r="6" fill="white" />
+            <circle cx="40" cy="55" r="3" fill="#1A1A1A" />
+            <circle cx="60" cy="55" r="3" fill="#1A1A1A" />
+          </g>
+        );
+      case 'medal':
+        return (
+          <g>
+            {/* Ribbon */}
+            <path d="M45 70 L50 85 L55 70" fill="#3B82F6" stroke="#1A1A1A" strokeWidth="1" />
+            {/* Medal */}
+            <circle cx="50" cy="88" r="6" fill="#FACC15" stroke="#1A1A1A" strokeWidth="1.5" />
+            <text x="50" y="88" fontSize="6" fontWeight="black" textAnchor="middle" fill="#1A1A1A" dy=".3em">1</text>
           </g>
         );
       default:

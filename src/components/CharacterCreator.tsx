@@ -13,9 +13,9 @@ interface Props {
 }
 
 const CharacterCreator: React.FC<Props> = ({ isOpen, onClose, customization, onUpdate }) => {
-  const clothingOptions: HamoodiCustomization['clothing'][] = ['none', 'shirt', 'suit', 'jacket'];
-  const accessoryOptions: HamoodiCustomization['accessory'][] = ['none', 'glasses'];
-  const headwearOptions: HamoodiCustomization['headwear'][] = ['none', 'hat'];
+  const clothingOptions: HamoodiCustomization['clothing'][] = ['none', 'shirt', 'suit', 'jacket', 'thobe', 'superhero'];
+  const accessoryOptions: HamoodiCustomization['accessory'][] = ['none', 'glasses', 'mask', 'medal'];
+  const headwearOptions: HamoodiCustomization['headwear'][] = ['none', 'hat', 'ghutra', 'crown'];
   const personalityOptions: HamoodiCustomization['personality'][] = ['friendly', 'competitive', 'kind'];
 
   const handleOptionChange = (key: keyof HamoodiCustomization, value: string) => {

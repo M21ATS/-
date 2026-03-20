@@ -2,9 +2,9 @@
 export type HamoodiMood = 'neutral' | 'happy' | 'excited' | 'sleepy' | 'sad';
 
 export interface HamoodiCustomization {
-  clothing: 'none' | 'shirt' | 'suit' | 'jacket';
-  accessory: 'none' | 'glasses';
-  headwear: 'none' | 'hat';
+  clothing: 'none' | 'shirt' | 'suit' | 'jacket' | 'thobe' | 'superhero';
+  accessory: 'none' | 'glasses' | 'mask' | 'medal';
+  headwear: 'none' | 'hat' | 'ghutra' | 'crown';
   personality: 'friendly' | 'competitive' | 'kind';
 }
 
