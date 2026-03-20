@@ -40,6 +40,36 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 const PRESET_BANKS: Record<string, Record<string, { q: string; a: string }[]>> = {
+  "البنك الشخصي السهل 🌟": {
+    "ا": [{ "q": "أول حرف في الأبجدية؟", "a": "ألف" }, { "q": "فاكهة خضراء أو حمراء؟", "a": "أنناس" }],
+    "ب": [{ "q": "حيوان يعطينا الحليب؟", "a": "بقرة" }, { "q": "طائر يسبح في الماء؟", "a": "بطة" }],
+    "ت": [{ "q": "فاكهة حمراء مشهورة؟", "a": "تفاح" }, { "q": "حيوان زاحف ضخم؟", "a": "تمساح" }],
+    "ث": [{ "q": "حيوان يشتهر بالمكر؟", "a": "ثعلب" }, { "q": "ملابس نرتديها؟", "a": "ثوب" }],
+    "ج": [{ "q": "سفينة الصحراء؟", "a": "جمل" }, { "q": "شيء نلبسه في القدم؟", "a": "جوارب" }],
+    "ح": [{ "q": "طائر يرمز للسلام؟", "a": "حمامة" }, { "q": "حيوان سريع جداً؟", "a": "حصان" }],
+    "خ": [{ "q": "حيوان يغطي جسمه الصوف؟", "a": "خروف" }, { "q": "مادة نصنع منها الأثاث؟", "a": "خشب" }],
+    "د": [{ "q": "حيوان ذكي في البحر؟", "a": "دلفين" }, { "q": "طائر يعطينا البيض؟", "a": "دجاجة" }],
+    "ذ": [{ "q": "حشرة تطير ومزعجة؟", "a": "ذباب" }, { "q": "حيوان مفترس؟", "a": "ذئب" }],
+    "ر": [{ "q": "حيوان يعيش في الثلج؟", "a": "رنة" }, { "q": "شيء يغطي جسم الطيور؟", "a": "ريش" }],
+    "ز": [{ "q": "حيوان رقبته طويلة؟", "a": "زرافة" }, { "q": "نبات جميل الرائحة؟", "a": "زهرة" }],
+    "س": [{ "q": "حيوان يحمل بيته؟", "a": "سلحفاة" }, { "q": "نجم يضيء النهار؟", "a": "شمس" }],
+    "ش": [{ "q": "نجم يضيء النهار؟", "a": "شمس" }, { "q": "مكان نعيش فيه؟", "a": "شقة" }],
+    "ص": [{ "q": "طائر جارح قوي؟", "a": "صقر" }, { "q": "صوت القطة؟", "a": "صياح" }],
+    "ض": [{ "q": "حيوان يقفز في الماء؟", "a": "ضفدع" }, { "q": "حيوان مفترس؟", "a": "ضبع" }],
+    "ط": [{ "q": "طائر جميل الريش؟", "a": "طاووس" }, { "q": "وسيلة نقل تطير؟", "a": "طائرة" }],
+    "ظ": [{ "q": "حيوان يشبه الغزال؟", "a": "ظبي" }, { "q": "شيء يظهر في الشمس؟", "a": "ظل" }],
+    "ع": [{ "q": "طائر يلقب بملك الطيور؟", "a": "عقاب" }, { "q": "حشرة تنسج خيوطاً؟", "a": "عنكبوت" }],
+    "غ": [{ "q": "حيوان رشيق وجميل؟", "a": "غزال" }, { "q": "طائر أسود ذكي؟", "a": "غراب" }],
+    "ف": [{ "q": "حيوان ضخم بخرطوم؟", "a": "فيل" }, { "q": "حشرة ملونة جميلة؟", "a": "فراشة" }],
+    "ق": [{ "q": "حيوان يحب الموز؟", "a": "قرد" }, { "q": "حيوان أليف يموي؟", "a": "قط" }],
+    "ك": [{ "q": "حيوان وفي جداً؟", "a": "كلب" }, { "q": "شيء نقرأ فيه؟", "a": "كتاب" }],
+    "ل": [{ "q": "ملك الغابة؟", "a": "ليث" }, { "q": "فاكهة حامضة صفراء؟", "a": "ليمون" }],
+    "م": [{ "q": "حيوان يحب الموز؟", "a": "ماعز" }, { "q": "مكان نتعلم فيه؟", "a": "مدرسة" }],
+    "ن": [{ "q": "حشرة نشيطة جداً؟", "a": "نملة" }, { "q": "طائر كبير لا يطير؟", "a": "نعامة" }],
+    "ه": [{ "q": "طائر ذكره الهدهد؟", "a": "هدهد" }, { "q": "حيوان مفترس ضخم؟", "a": "هزبر" }],
+    "و": [{ "q": "حيوان يشبه السحلية؟", "a": "ورل" }, { "q": "طائر مائي جميل؟", "a": "وز" }],
+    "ي": [{ "q": "طائر يشبه الحمامة؟", "a": "يمام" }, { "q": "يد الإنسان؟", "a": "يد" }]
+  },
   "عالم الحيوان 🦁":{
   "ا": [
     { "q": "أضخم حيوان ثديي يعيش في المحيطات؟", "a": "أسد البحر" },
@@ -2521,7 +2551,7 @@ const Confetti = () => {
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
       {particles.map((_, i) => (
         <div 
-          key={i}
+          key={`confetti-${i}`}
           className="absolute animate-confetti"
           style={{
             left: `${Math.random() * 100}%`,
@@ -2731,7 +2761,20 @@ export default function App() {
   const [tiles, setTiles] = useState<string[]>(Array(25).fill('neutral'));
   const [letters, setLetters] = useState<string[]>(INITIAL_LETTERS);
   const [selectedIdx, setSelectedIdx] = useState<number>(-1);
-  const [questions, setQuestions] = useState(FALLBACK_QUESTIONS);
+  const [questions, setQuestions] = useState(() => {
+    const initialBanks = { "الأسئلة الافتراضية": FALLBACK_QUESTIONS, ...PRESET_BANKS };
+    const bankNames = ["الأسئلة الافتراضية", "البنك الشخصي السهل 🌟"];
+    const merged: Record<string, { q: string; a: string }[]> = {};
+    bankNames.forEach(name => {
+      const bankData = initialBanks[name as keyof typeof initialBanks];
+      if (!bankData) return;
+      Object.entries(bankData).forEach(([letter, qs]) => {
+        const existing = merged[letter] || [];
+        merged[letter] = [...existing, ...(qs as { q: string; a: string }[])];
+      });
+    });
+    return merged;
+  });
   const [usedQuestions, setUsedQuestions] = useState<Record<string, number[]>>({});
   const [winner, setWinner] = useState<'red' | 'green' | null>(null);
   const [scores, setScores] = useState({ red: 0, green: 0 });
@@ -2915,7 +2958,7 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hroof_banks', JSON.stringify(banks));
   }, [banks]);
-  const [selectedBankNames, setSelectedBankNames] = useState<string[]>(["الأسئلة الافتراضية"]);
+  const [selectedBankNames, setSelectedBankNames] = useState<string[]>(["الأسئلة الافتراضية", "البنك الشخصي السهل 🌟"]);
 
   const updateQuestionsFromBanks = (bankNames: string[]) => {
     const merged: Record<string, { q: string; a: string }[]> = {};
@@ -3866,15 +3909,16 @@ export default function App() {
                 <div className="flex-1 overflow-y-auto border-2 lg:border-4 border-[#1A1A1A] rounded-xl lg:rounded-2xl p-1 lg:p-4 flex flex-col gap-1 bg-gray-50 custom-scrollbar">
                   {Object.keys(banks).map(name => {
                     const isPreset = name === "الأسئلة الافتراضية" || !!PRESET_BANKS[name];
+                    const isEasy = name === "البنك الشخصي السهل 🌟";
                     const isSelected = selectedBankNames.includes(name);
                     return (
-                      <div key={name} className="relative group">
+                      <div key={`bank-${name}`} className="relative group">
                         <button 
                           onClick={() => toggleBank(name)}
-                          className={`w-full p-1 lg:p-3 rounded-lg border-2 lg:border-4 border-[#1A1A1A] font-black text-right transition-all flex justify-between items-center ${isSelected ? 'bg-[#1A1A1A] text-white shadow-[2px_2px_0_#22C55E]' : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
+                          className={`w-full p-1 lg:p-3 rounded-lg border-2 lg:border-4 border-[#1A1A1A] font-black text-right transition-all flex justify-between items-center ${isSelected ? (isEasy ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-[2px_2px_0_#1A1A1A]' : 'bg-[#1A1A1A] text-white shadow-[2px_2px_0_#22C55E]') : 'bg-white text-[#1A1A1A] hover:bg-gray-100'}`}
                         >
                           <div className="flex items-center gap-1 truncate">
-                            {isPreset && <span className="text-[6px] lg:text-[8px] bg-blue-500 text-white px-1 rounded">ثابت</span>}
+                            {isPreset && <span className={`text-[6px] lg:text-[8px] ${isEasy ? 'bg-yellow-600' : 'bg-blue-500'} text-white px-1 rounded`}>{isEasy ? 'مميز' : 'ثابت'}</span>}
                             <span className="text-[8px] lg:text-sm truncate">{name}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -3945,7 +3989,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-0.5">
                       {teams.red.map((p, i) => (
-                        <span key={i} className="bg-white border-2 border-[#1A1A1A] rounded-md px-1 py-0.5 text-[7px] lg:text-xs font-bold flex items-center gap-1">
+                        <span key={`red-${p}-${i}`} className="bg-white border-2 border-[#1A1A1A] rounded-md px-1 py-0.5 text-[7px] lg:text-xs font-bold flex items-center gap-1">
                           {p}
                           <button onClick={() => removePlayer('red', i)} className="text-red-500">×</button>
                         </span>
@@ -3994,7 +4038,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-0.5">
                       {teams.green.map((p, i) => (
-                        <span key={i} className="bg-white border-2 border-[#1A1A1A] rounded-md px-1 py-0.5 text-[7px] lg:text-xs font-bold flex items-center gap-1">
+                        <span key={`green-${p}-${i}`} className="bg-white border-2 border-[#1A1A1A] rounded-md px-1 py-0.5 text-[7px] lg:text-xs font-bold flex items-center gap-1">
                           {p}
                           <button onClick={() => removePlayer('green', i)} className="text-green-500">×</button>
                         </span>
@@ -4380,7 +4424,7 @@ export default function App() {
                 <div className="flex gap-1 justify-center">
                   {[...Array(winCondition)].map((_, i) => (
                     <motion.div 
-                      key={i} 
+                      key={`red-win-${i}`} 
                       animate={{ 
                         scale: scores.red > i ? [1, 1.3, 1] : 1, 
                         backgroundColor: scores.red > i ? '#EF4444' : '#F3F4F6' 
@@ -4402,7 +4446,7 @@ export default function App() {
                 <div className="flex gap-1 justify-center">
                   {[...Array(winCondition)].map((_, i) => (
                     <motion.div 
-                      key={i} 
+                      key={`green-win-${i}`} 
                       animate={{ 
                         scale: scores.green > i ? [1, 1.3, 1] : 1, 
                         backgroundColor: scores.green > i ? '#22C55E' : '#F3F4F6' 
@@ -4601,7 +4645,7 @@ export default function App() {
                 const x = (20 * cellSize) + vC * cS + (r % 2 === 0 ? 0 : cS / 2);
                 const y = (20 * cellSize) + r * rS;
                 return (
-                  <g key={idx} transform={`translate(${x},${y})`}>
+                  <g key={`hex-host-${idx}`} transform={`translate(${x},${y})`}>
                     <Hexagon 
                       state={tiles[idx]} 
                       letter={letters[idx]} 
@@ -4778,7 +4822,7 @@ export default function App() {
               <div className={`${currentTheme.board} border-2 border-[#1A1A1A] rounded-xl p-2 max-h-32 overflow-y-auto text-[10px] font-bold`}>
                 {selectedIdx !== -1 ? (
                   (questions[letters[selectedIdx]] || []).map((q, i) => (
-                    <div key={i} className="mb-2 border-b border-gray-100 pb-1 last:border-0">
+                    <div key={`q-display-${letters[selectedIdx]}-${i}`} className="mb-2 border-b border-gray-100 pb-1 last:border-0">
                       <p className={currentTheme.text}>س: {q.q}</p>
                       <p className="text-green-600">ج: {q.a}</p>
                     </div>
@@ -4809,7 +4853,7 @@ export default function App() {
                     <motion.div 
                       initial={{ x: 20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
-                      key={i} 
+                      key={`log-${i}`} 
                       className="text-[10px] font-bold border-b border-gray-100 pb-1 flex justify-between items-start gap-2"
                     >
                       <span className={currentTheme.text}>{log.text}</span>
@@ -4878,7 +4922,7 @@ export default function App() {
                 const x = (20 * cellSize) + vC * cS + (r % 2 === 0 ? 0 : cS / 2);
                 const y = (20 * cellSize) + r * rS;
                 return (
-                  <g key={idx} transform={`translate(${x},${y})`}>
+                  <g key={`hex-guest-${idx}`} transform={`translate(${x},${y})`}>
                     <Hexagon 
                       state={tiles[idx]} 
                       letter={letters[idx]} 
@@ -5071,7 +5115,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4">
                 {teams[showPlayerSelector.team].map((p, i) => (
                   <button 
-                    key={i}
+                    key={`selector-${p}-${i}`}
                     onClick={() => confirmMarkTile(p)}
                     className={`p-4 border-4 border-[#1A1A1A] rounded-2xl font-black text-lg shadow-[4px_4px_0_#1A1A1A] hover:translate-y-[-2px] active:translate-y-[2px] transition-all ${showPlayerSelector.team === 'red' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}
                   >
@@ -5555,7 +5599,7 @@ export default function App() {
                           <div className="text-center py-10 text-gray-400 font-bold italic">لا توجد أسئلة لهذا الحرف بعد...</div>
                         )}
                         {(questions[editingLetter] || []).map((q, i) => (
-                          <div key={i} className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 shadow-[4px_4px_0_#1A1A1A] flex justify-between items-center gap-4 group">
+                          <div key={`q-edit-${editingLetter}-${i}`} className="bg-white border-4 border-[#1A1A1A] rounded-2xl p-4 shadow-[4px_4px_0_#1A1A1A] flex justify-between items-center gap-4 group">
                             <div className="flex-1">
                               <p className="font-bold text-sm text-gray-600">س: {q.q}</p>
                               <p className="font-black text-green-600">ج: {q.a}</p>
